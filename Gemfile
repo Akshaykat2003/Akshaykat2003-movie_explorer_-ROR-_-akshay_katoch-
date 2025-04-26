@@ -4,47 +4,52 @@ ruby "3.1.4"
 
 # Core Rails
 gem "rails", "~> 7.1.5", ">= 7.1.5.1"
-gem "sprockets-rails"
-gem "pg", "~> 1.1"
-gem "puma", ">= 5.0"
-gem "importmap-rails"
-gem "turbo-rails"
-gem "stimulus-rails"
-gem "jbuilder"
+gem "pg", "~> 1.1" # PostgreSQL database
+gem "puma", ">= 5.0" # Web server
+gem "jbuilder" # JSON API responses
+gem "bootsnap", require: false # Speeds up boot time
 
 # Environment Variables
-gem "dotenv-rails"
+gem "dotenv-rails", groups: [:development, :test] # Load .env variables
 
-# JWT-based Authentication
-gem "bcrypt", "~> 3.1.7"
-gem "jwt"
+# Authentication
+gem "bcrypt", "~> 3.1.7" # Password hashing
+gem "jwt" # JWT-based authentication
 
 # Admin Panel
-gem "activeadmin"
-gem "devise"
+gem "activeadmin" # Admin interface
+# gem "sassc-rails" # Required for ActiveAdmin styling
 
-# File Uploads (ActiveStorage)
-gem "image_processing", "~> 1.2"
+# File Uploads
+# gem "image_processing", "~> 1.2" # Image processing for ActiveStorage
+# gem "aws-sdk-s3", require: false # S3 for ActiveStorage in production
+
+# Notifications
+# gem "letter_opener", group: :development # Preview emails in development
 
 # Swagger/OpenAPI for API Docs
-gem "rswag"
+gem "rswag-api" # Swagger API integration
+gem "rswag-ui" # Swagger UI
+gem "rswag-specs" # Swagger spec generation
 
-# Windows zone fix
+# CORS for API
+gem "rack-cors" # Enable CORS for frontend API calls
+
+# Windows timezone fix
 gem "tzinfo-data", platforms: %i[windows jruby]
 
-# Bootsnap for speed
-gem "bootsnap", require: false
-
+# Development and Test
 group :development, :test do
-  # Debugging tools
-  gem "debug", platforms: %i[mri windows]
-
-  # Testing framework
-  gem "rspec-rails"
-  gem "factory_bot_rails"
+  gem "debug", platforms: %i[mri windows] # Debugging
+  gem "rspec-rails" # Testing framework
+  gem "factory_bot_rails" # Test data generation
 end
 
 group :development do
-  gem "web-console"
-  gem "error_highlight", ">= 0.4.0", platforms: [:ruby]
+  gem "web-console" # Browser-based console
+  gem "error_highlight", ">= 0.4.0", platforms: [:ruby] # Better error messages
+end
+
+group :test do
+  gem "shoulda-matchers" # Simplifies model testing
 end
