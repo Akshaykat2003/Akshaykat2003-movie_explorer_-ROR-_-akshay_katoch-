@@ -1,0 +1,37 @@
+ActiveAdmin.register_page "Dashboard" do
+  menu priority: 1, label: proc { I18n.t("active_admin.dashboard") }
+
+  content title: proc { I18n.t("active_admin.dashboard") } do
+    columns do
+      column do
+        panel "User Statistics", style: "background-color: #f0f8ff; padding: 20px; border-radius: 10px;" do
+          para "Total Users: #{User.where(role: 'user').count}", style: "font-weight: bold;"
+          para "Total Admins: #{User.where(role: 'admin').count}", style: "font-weight: bold;"
+          para "Total Supervisors: #{User.where(role: 'supervisor').count}", style: "font-weight: bold;"
+          para "Total All Users: #{User.count}", style: "font-weight: bold;"
+        end
+      end
+
+      column do
+        panel "User Distribution Chart" do
+          pie_chart({
+            "Users" => User.where(role: 'user').count,
+            "Admins" => User.where(role: 'admin').count,
+            "Supervisors" => User.where(role: 'supervisor').count
+          }, donut: true, legend: "bottom")
+        end
+      end
+    end
+
+    columns do
+      column do
+        panel "Quick Links", style: "background-color: #e6ffe6; padding: 20px; border-radius: 10px;" do
+          ul do
+            li link_to "View All Users", admin_users_path
+            li link_to "Add New User", new_admin_user_path
+          end
+        end
+      end
+    end
+  end
+end
