@@ -14,7 +14,7 @@ RSpec.configure do |config|
       paths: {},
       servers: [
         { url: 'http://localhost:3000', description: 'Development server' },
-        { url: 'https://your-app.onrender.com', description: 'Production server' } # Update with your Render URL
+        { url: 'https://movie-explorer-rorakshaykat2003-movie.onrender.com', description: 'Production server' } # Update with your Render URL
       ]
     }
   }
