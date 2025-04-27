@@ -4,16 +4,19 @@ class ApplicationController < ActionController::Base
   attr_reader :current_user
 
   private
-
   def authenticate_request
-  
     return if request.format.html?
+
     header = request.headers['Authorization']
-    token = header.split(' ').last if header.present?
-    @current_user = User.decode_jwt(token)
+    if header.present?
+      token = header.split(' ').last
+      @current_user = User.decode_jwt(token)
   
-    unless @current_user
-      render json: { error: 'Unauthorized' }, status: :unauthorized
+      unless @current_user
+        render json: { error: 'Unauthorized' }, status: :unauthorized
+      end
+    else
+      render json: { error: 'Authorization header missing' }, status: :unauthorized
     end
-  end  
+  end
 end
