@@ -2,12 +2,12 @@ class User < ApplicationRecord
   has_secure_password
 
   def self.ransackable_attributes(auth_object = nil)
-    # Add attributes to be searchable here
+   
     ["first_name", "last_name", "email", "mobile_number", "role"]
   end
 
   def self.ransackable_associations(auth_object = nil)
-    [] # If you don't want any association to be searchable
+    []
   end
 
   VALID_EMAIL_REGEX = /\A[^@\s]+@[^@\s]+\z/

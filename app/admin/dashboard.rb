@@ -2,23 +2,28 @@ ActiveAdmin.register_page "Dashboard" do
   menu priority: 1, label: proc { I18n.t("active_admin.dashboard") }
 
   content title: proc { I18n.t("active_admin.dashboard") } do
+    
     columns do
       column do
         panel "User Statistics", style: "background-color: #f0f8ff; padding: 20px; border-radius: 10px;" do
           para "Total Users: #{User.where(role: 'user').count}", style: "font-weight: bold;"
-          para "Total Admins: #{User.where(role: 'admin').count}", style: "font-weight: bold;"
+          para "Total Admins: #{AdminUser.count}", style: "font-weight: bold;"
           para "Total Supervisors: #{User.where(role: 'supervisor').count}", style: "font-weight: bold;"
-          para "Total All Users: #{User.count}", style: "font-weight: bold;"
+          para "Total All Users: #{User.count + AdminUser.count}", style: "font-weight: bold;"
         end
       end
 
       column do
         panel "User Distribution Chart" do
-          pie_chart({
-            "Users" => User.where(role: 'user').count,
-            "Admins" => User.where(role: 'admin').count,
-            "Supervisors" => User.where(role: 'supervisor').count
-          }, donut: true, legend: "bottom")
+          pie_chart(
+            {
+              "Users" => User.where(role: 'user').count,
+              "Admins" => AdminUser.count,
+              "Supervisors" => User.where(role: 'supervisor').count
+            },
+            donut: true,
+            legend: "bottom"
+          )
         end
       end
     end
@@ -33,5 +38,6 @@ ActiveAdmin.register_page "Dashboard" do
         end
       end
     end
+
   end
 end
