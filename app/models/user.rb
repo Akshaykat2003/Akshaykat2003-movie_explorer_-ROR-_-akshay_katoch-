@@ -20,7 +20,6 @@ class User < ApplicationRecord
   validates :role, presence: true, inclusion: { in: %w[user supervisor] }
 
   def self.register(params)
-    # Set default role to 'user' if not provided
     params[:role] ||= 'user'
     user = User.new(params)
     if user.save
@@ -39,7 +38,6 @@ class User < ApplicationRecord
   def generate_jwt
     payload = { user_id: id, exp: 7.days.from_now.to_i }
     JWT.encode(payload, Rails.application.credentials.secret_key_base)
-
   end
 
   def self.decode_jwt(token)
@@ -48,5 +46,4 @@ class User < ApplicationRecord
   rescue JWT::DecodeError, ActiveRecord::RecordNotFound
     nil
   end
-  
 end

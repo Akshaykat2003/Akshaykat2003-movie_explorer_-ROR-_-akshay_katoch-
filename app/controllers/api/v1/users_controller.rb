@@ -4,9 +4,7 @@ class Api::V1::UsersController < ApplicationController
 
   def signup
     params[:role] = 'user' unless params[:role] 
-    
     result = User.register(user_params)
-    
     if result[:success]
       user = result[:user]
       render json: { message: "Signup successful", user: user.as_json(except: [:password_digest]) }, status: :created
@@ -16,7 +14,6 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def login
-    
     user = User.authenticate(params[:email], params[:password])
     if user
       token = user.generate_jwt

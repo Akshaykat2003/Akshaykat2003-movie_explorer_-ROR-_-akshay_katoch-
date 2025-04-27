@@ -8,7 +8,6 @@ class ApplicationController < ActionController::Base
   def authenticate_request
   
     return if request.format.html?
-  
     header = request.headers['Authorization']
     token = header.split(' ').last if header.present?
     @current_user = User.decode_jwt(token)
