@@ -50,10 +50,10 @@ class Movie < ApplicationRecord
 
   # Instance methods to get the URLs for poster and banner images
   def poster_url
-    Rails.application.routes.url_helpers.rails_blob_path(poster, only_path: true) if poster.attached?
+    poster.service_url if poster.attached?
   end
-
+  
   def banner_url
-    Rails.application.routes.url_helpers.rails_blob_path(banner, only_path: true) if banner.attached?
+    banner.service_url if banner.attached?
   end
 end
