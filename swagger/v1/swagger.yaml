@@ -3,11 +3,11 @@ info:
   title: Movie Explorer+ API
   version: v1
 paths:
-  "/api/v1/signup":
+  /api/v1/signup:
     post:
       summary: Signup user
       tags:
-      - Users
+        - Users
       parameters: []
       requestBody:
         content:
@@ -31,21 +31,64 @@ paths:
                   type: string
                   example: "9876543210"
               required:
-              - first_name
-              - last_name
-              - email
-              - password
-              - mobile_number
+                - first_name
+                - last_name
+                - email
+                - password
+                - mobile_number
       responses:
         '201':
           description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Signup successful"
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiJ9..."
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      first_name:
+                        type: string
+                        example: Akshay
+                      last_name:
+                        type: string
+                        example: Katoch
+                      email:
+                        type: string
+                        example: akshaykatoch38@gmail.com
+                      mobile_number:
+                        type: string
+                        example: "9876543210"
+                      role:
+                        type: string
+                        example: user
+                        enum: [user, supervisor]
         '422':
-          description: Invalid email format
-  "/api/v1/login":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Email has already been taken", "Password is too short (minimum is 6 characters)"]
+  /api/v1/login:
     post:
       summary: Login user
       tags:
-      - Users
+        - Users
       parameters: []
       requestBody:
         content:
@@ -60,15 +103,47 @@ paths:
                   type: string
                   example: Password123
               required:
-              - email
-              - password
+                - email
+                - password
       responses:
         '200':
           description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiJ9..."
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                        example: 1
+                      name:
+                        type: string
+                        example: "Akshay Katoch"
+                      email:
+                        type: string
+                        example: akshaykatoch38@gmail.com
+                      role:
+                        type: string
+                        example: user
+                        enum: [user, supervisor]
         '401':
-          description: Missing password
+          description: Invalid email or password
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid email or password"
 servers:
-- url: http://localhost:3000
-  description: Development server
-- url: https://movie-explorer-rorakshaykat2003-movie.onrender.com
-  description: Production server
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://movie-explorer-rorakshaykat2003-movie.onrender.com
+    description: Production server
