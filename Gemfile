@@ -62,3 +62,5 @@ gem 'rswag-specs'
 
 gem 'activestorage', '~> 7.1.5'
 gem 'cloudinary', '~> 1.16'
+
+gem "kaminari" # Pagination

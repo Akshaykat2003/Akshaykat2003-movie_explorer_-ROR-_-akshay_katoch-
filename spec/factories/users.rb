@@ -7,9 +7,12 @@ FactoryBot.define do
     mobile_number { Faker::Number.number(digits: 10).to_s }  
     role { 'user' }
 
-    # Optional: You could override some attributes here if needed
-    # trait :admin do
-    #   role { 'supervisor' }
-    # end
+    trait :admin do
+      role { 'admin' }
+    end
+   
+    trait :admin do
+      role { 'supervisor' }
+    end
   end
 end

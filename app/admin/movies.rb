@@ -1,11 +1,7 @@
 ActiveAdmin.register Movie do
-  # Permit these parameters
-  permit_params :title, :genre, :release_year, :rating, :director, :duration, :description, :plan, :poster
+  permit_params :title, :genre, :release_year, :rating, :director, :duration, :description, :plan, :poster, :banner
 
-  # Controller block to handle role-based access
   controller do
-    # before_action :authorize_admin_only
-
     private
 
     def authorize_admin_only
@@ -22,7 +18,6 @@ ActiveAdmin.register Movie do
   filter :rating
   filter :plan, as: :select, collection: Movie.plans.keys.map { |plan| [plan.capitalize, plan] }
 
-  # Index page
   index do
     selectable_column
     id_column
@@ -34,10 +29,15 @@ ActiveAdmin.register Movie do
     column :duration
     column :description
     column :plan
+    column :poster do |movie|
+      image_tag movie.poster.url, size: '50x50' if movie.poster.attached?
+    end
+    column :banner do |movie|
+      image_tag movie.banner.url, size: '50x50' if movie.banner.attached?
+    end
     actions
   end
 
-  # Show page
   show do
     attributes_table do
       row :title
@@ -51,11 +51,13 @@ ActiveAdmin.register Movie do
       row :poster do
         image_tag movie.poster.url if movie.poster.attached?
       end
+      row :banner do
+        image_tag movie.banner.url if movie.banner.attached?
+      end
     end
     active_admin_comments
   end
 
-  # Form page for creating or updating a movie
   form do |f|
     f.inputs 'Movie Details' do
       f.input :title
@@ -67,6 +69,7 @@ ActiveAdmin.register Movie do
       f.input :description
       f.input :plan, as: :select, collection: Movie.plans.keys.map { |plan| [plan.capitalize, plan] }
       f.input :poster, as: :file
+      f.input :banner, as: :file
     end
     f.actions
   end
