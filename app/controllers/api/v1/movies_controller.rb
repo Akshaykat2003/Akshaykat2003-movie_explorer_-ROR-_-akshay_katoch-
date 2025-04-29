@@ -12,7 +12,7 @@ module Api
         movies = Movie.search_and_filter(params)
         paginated_movies = movies.page(params[:page]).per(10)
         render json: {
-          movies: paginated_movies.as_json(only: [:id, :title, :genre, :release_year, :rating, :plan], methods: [:poster_url, :banner_url]),
+          movies: paginated_movies.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]),
           total_pages: paginated_movies.total_pages,
           current_page: paginated_movies.current_page 
         }, status: :ok
