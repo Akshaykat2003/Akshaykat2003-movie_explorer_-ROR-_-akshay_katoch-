@@ -14,6 +14,13 @@ Rails.application.routes.draw do
       patch 'movies/:id', to: 'movies#update'   
       put 'movies/:id', to: 'movies#update'     
       delete 'movies/:id', to: 'movies#destroy' 
+
+      get 'subscriptions', to: 'subscriptions#index'
+      get 'subscriptions/:id', to: 'subscriptions#show'
+      post 'subscriptions', to: 'subscriptions#create'
+      patch 'subscriptions/:id', to: 'subscriptions#update'
+      put 'subscriptions/:id', to: 'subscriptions#update'
+      delete 'subscriptions/:id', to: 'subscriptions#destroy'
     end
   end
 
