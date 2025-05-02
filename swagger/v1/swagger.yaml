@@ -8,7 +8,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies)
+      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions)
 paths:
   /api/v1/signup:
     post:
@@ -37,10 +37,6 @@ paths:
                 mobile_number:
                   type: string
                   example: "9876543210"
-                role:
-                  type: string
-                  enum: [user, supervisor, admin]
-                  example: user
               required:
                 - first_name
                 - last_name
@@ -164,20 +160,13 @@ paths:
           required: false
           schema:
             type: string
-          description: Search by title or description
+          description: Search by title
         - name: genre
           in: query
           required: false
           schema:
             type: string
           description: Filter by genre
-        - name: plan
-          in: query
-          required: false
-          schema:
-            type: string
-            enum: [basic, gold, platinum]
-          description: Filter by plan
         - name: page
           in: query
           required: false
@@ -207,6 +196,12 @@ paths:
                           type: integer
                         rating:
                           type: number
+                        director:
+                          type: string
+                        duration:
+                          type: integer
+                        description:
+                          type: string
                         plan:
                           type: string
                           enum: [basic, gold, platinum]
@@ -418,7 +413,7 @@ paths:
             type: integer
       requestBody:
         content:
-          application/json:
+          multipart/form-data:
             schema:
               type: object
               properties:
@@ -447,6 +442,14 @@ paths:
                   type: string
                   enum: [basic, gold, platinum]
                   example: platinum
+                poster:
+                  type: string
+                  format: binary
+                  description: Poster image file
+                banner:
+                  type: string
+                  format: binary
+                  description: Banner image file
       responses:
         '200':
           description: Movie updated successfully
@@ -567,6 +570,293 @@ paths:
                 properties:
                   error:
                     type: string
+  /api/v1/subscriptions:
+    get:
+      summary: List subscriptions
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Subscriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    user_id:
+                      type: integer
+                    plan:
+                      type: string
+                      enum: [basic, gold, platinum]
+                    status:
+                      type: string
+                      enum: [active, inactive, cancelled]
+                    payment_id:
+                      type: string
+                      nullable: true
+                    expiry_date:
+                      type: string
+                      format: date-time
+                      nullable: true
+                    created_at:
+                      type: string
+                      format: date-time
+                    updated_at:
+                      type: string
+                      format: date-time
+    post:
+      summary: Create a subscription
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plan:
+                  type: string
+                  enum: [basic, gold, platinum]
+                  example: gold
+                payment_id:
+                  type: string
+                  example: pay_123456
+                  nullable: true
+              required:
+                - plan
+      responses:
+        '201':
+          description: Subscription created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  user_id:
+                    type: integer
+                  plan:
+                    type: string
+                    enum: [basic, gold, platinum]
+                  status:
+                    type: string
+                    enum: [active, inactive, cancelled]
+                  payment_id:
+                    type: string
+                    nullable: true
+                  expiry_date:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+        '422':
+          description: Subscription creation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Subscription creation/payment failed"
+  /api/v1/subscriptions/{id}:
+    get:
+      summary: Show a subscription
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subscription retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  user_id:
+                    type: integer
+                  plan:
+                    type: string
+                    enum: [basic, gold, platinum]
+                  status:
+                    type: string
+                    enum: [active, inactive, cancelled]
+                  payment_id:
+                    type: string
+                    nullable: true
+                  expiry_date:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Subscription not found"
+    put:
+      summary: Update a subscription
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscription:
+                  type: object
+                  properties:
+                    plan:
+                      type: string
+                      enum: [basic, gold, platinum]
+                      example: platinum
+                    status:
+                      type: string
+                      enum: [active, inactive, cancelled]
+                      example: active
+                    payment_id:
+                      type: string
+                      example: pay_123456
+                      nullable: true
+              required:
+                - subscription
+      responses:
+        '200':
+          description: Subscription updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  user_id:
+                    type: integer
+                  plan:
+                    type: string
+                    enum: [basic, gold, platinum]
+                  status:
+                    type: string
+                    enum: [active, inactive, cancelled]
+                  payment_id:
+                    type: string
+                    nullable: true
+                  expiry_date:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  created_at:
+                    type: string
+                    format: date-time
+                  updated_at:
+                    type: string
+                    format: date-time
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Subscription not found"
+        '422':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    items:
+                      type: string
+    delete:
+      summary: Delete a subscription
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subscription deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Subscription deleted successfully"
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Subscription not found"
+        '422':
+          description: Failed to delete subscription
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Failed to delete subscription"
 servers:
   - url: http://localhost:3000
     description: Development server

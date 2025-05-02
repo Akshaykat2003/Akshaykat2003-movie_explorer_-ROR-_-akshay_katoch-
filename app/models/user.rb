@@ -1,17 +1,6 @@
 class User < ApplicationRecord
   has_secure_password
-
-  
   has_one :subscription, dependent: :destroy
-
-  def self.ransackable_attributes(auth_object = nil)
-   
-    ["first_name", "last_name", "email", "mobile_number", "role"]
-  end
-
-  def self.ransackable_associations(auth_object = nil)
-    []
-  end
 
   VALID_EMAIL_REGEX = /\A[^@\s]+@[^@\s]+\z/
 
@@ -22,8 +11,16 @@ class User < ApplicationRecord
   validates :mobile_number, presence: true, length: { is: 10 }, numericality: { only_integer: true }
   validates :role, presence: true, inclusion: { in: %w[user supervisor] }
 
+  def self.ransackable_attributes(auth_object = nil)
+    ["first_name", "last_name", "email", "mobile_number", "role"]
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    []
+  end
+
   def self.register(params)
-    params[:role] ||= 'user'
+    params[:role] = 'user'  # Ensure role is always 'user'
     user = User.new(params)
     if user.save
       { success: true, user: user }
@@ -39,13 +36,15 @@ class User < ApplicationRecord
   end
 
   def generate_jwt
-    payload = { user_id: id, exp: 7.days.from_now.to_i }
+    payload = { user_id: id, exp: 1.day.from_now.to_i }  # Token expires in 1 day
     JWT.encode(payload, Rails.application.credentials.secret_key_base)
   end
 
   def self.decode_jwt(token)
     decoded = JWT.decode(token, Rails.application.credentials.secret_key_base)[0]
     User.find(decoded["user_id"])
+  rescue JWT::ExpiredSignature
+    nil  # Token expired
   rescue JWT::DecodeError, ActiveRecord::RecordNotFound
     nil
   end
