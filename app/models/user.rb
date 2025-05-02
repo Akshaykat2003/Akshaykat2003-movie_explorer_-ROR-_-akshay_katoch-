@@ -1,6 +1,9 @@
 class User < ApplicationRecord
   has_secure_password
 
+  
+  has_one :subscription, dependent: :destroy
+
   def self.ransackable_attributes(auth_object = nil)
    
     ["first_name", "last_name", "email", "mobile_number", "role"]

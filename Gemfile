@@ -25,14 +25,6 @@ gem 'devise'
 
 gem "sassc-rails" # Required for ActiveAdmin styling
 
-# File Uploads
-# gem "image_processing", "~> 1.2" # Image processing for ActiveStorage
-# gem "aws-sdk-s3", require: false # S3 for ActiveStorage in production
-
-# Notifications
-# gem "letter_opener", group: :development # Preview emails in development
-
-
 gem 'sprockets-rails'
 
 
