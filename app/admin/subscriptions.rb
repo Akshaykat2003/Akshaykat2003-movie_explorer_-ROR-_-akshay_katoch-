@@ -1,8 +1,8 @@
 ActiveAdmin.register Subscription do
-  # Permit the required parameters for the Subscription model
+
   permit_params :user_id, :plan, :status, :payment_id, :expiry_date
 
-  # Customize the index page
+
   index do
     selectable_column
     id_column
@@ -15,13 +15,11 @@ ActiveAdmin.register Subscription do
     actions
   end
 
-  # Filter by plan, status, and user
   filter :user
   filter :plan, as: :select, collection: Subscription.plans.keys.map { |plan| [plan.capitalize, plan] }
   filter :status, as: :select, collection: Subscription.statuses.keys.map { |status| [status.capitalize, status] }
   filter :created_at
 
-  # Show page customization
   show do
     attributes_table do
       row :user
@@ -35,7 +33,6 @@ ActiveAdmin.register Subscription do
     active_admin_comments
   end
 
-  # Form page customization
   form do |f|
     f.inputs 'Subscription Details' do
       f.input :user
@@ -47,7 +44,7 @@ ActiveAdmin.register Subscription do
     f.actions
   end
 
-  # Custom Action to handle activation/deactivation
+ 
   member_action :activate, method: :put do
     subscription = Subscription.find(params[:id])
     if subscription.activate!
@@ -66,7 +63,7 @@ ActiveAdmin.register Subscription do
     end
   end
 
-  # Add custom actions to the index page
+
   action_item :activate, only: :show do
     if resource.status != 'active'
       link_to 'Activate Subscription', activate_admin_subscription_path(resource), method: :put

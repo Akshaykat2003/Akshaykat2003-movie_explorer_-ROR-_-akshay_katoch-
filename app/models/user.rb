@@ -20,7 +20,7 @@ class User < ApplicationRecord
   end
 
   def self.register(params)
-    params[:role] = 'user'  # Ensure role is always 'user'
+    params[:role] = 'user'  
     user = User.new(params)
     if user.save
       { success: true, user: user }
@@ -36,7 +36,7 @@ class User < ApplicationRecord
   end
 
   def generate_jwt
-    payload = { user_id: id, exp: 1.day.from_now.to_i }  # Token expires in 1 day
+    payload = { user_id: id, exp: 1.day.from_now.to_i }  
     JWT.encode(payload, Rails.application.credentials.secret_key_base)
   end
 
@@ -44,7 +44,7 @@ class User < ApplicationRecord
     decoded = JWT.decode(token, Rails.application.credentials.secret_key_base)[0]
     User.find(decoded["user_id"])
   rescue JWT::ExpiredSignature
-    nil  # Token expired
+    nil 
   rescue JWT::DecodeError, ActiveRecord::RecordNotFound
     nil
   end

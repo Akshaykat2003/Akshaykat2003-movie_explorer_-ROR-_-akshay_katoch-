@@ -1,7 +1,7 @@
 ActiveAdmin.register User do
   permit_params :first_name, :last_name, :email, :password, :mobile_number, :role
 
-  # Fix for the password_digest error
+ 
   filter :first_name
   filter :last_name
   filter :email

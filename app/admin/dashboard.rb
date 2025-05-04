@@ -3,7 +3,6 @@ ActiveAdmin.register_page "Dashboard" do
 
   content title: proc { I18n.t("active_admin.dashboard") } do
 
-    # User statistics and charts
     columns do
       column do
         panel "User Statistics", style: "background-color: #f0f8ff; padding: 20px; border-radius: 10px;" do
@@ -29,7 +28,6 @@ ActiveAdmin.register_page "Dashboard" do
       end
     end
 
-    # Quick Links
     columns do
       column do
         panel "Quick Links", style: "background-color: #e6ffe6; padding: 20px; border-radius: 10px;" do

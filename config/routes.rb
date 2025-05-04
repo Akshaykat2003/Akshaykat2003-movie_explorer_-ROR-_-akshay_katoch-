@@ -24,7 +24,6 @@ Rails.application.routes.draw do
     end
   end
 
-  # Admin panel route
   devise_for :admin_users, ActiveAdmin::Devise.config
   ActiveAdmin.routes(self)
 end

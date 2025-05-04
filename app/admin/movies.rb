@@ -11,7 +11,7 @@ ActiveAdmin.register Movie do
     end
   end
 
-  # Filters on index page
+  
   filter :title
   filter :genre
   filter :release_year

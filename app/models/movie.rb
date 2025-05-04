@@ -10,16 +10,14 @@ class Movie < ApplicationRecord
   validates :rating, presence: true
   validates :plan, presence: true
 
-  # Add 'plan' to the ransackable attributes
   def self.ransackable_attributes(auth_object = nil)
-    super + ["plan"]  # Add 'plan' to the list of searchable attributes
+    super + ["plan"]  
   end
 
   def self.ransackable_associations(auth_object = nil)
     ["banner_attachment", "banner_blob", "poster_attachment", "poster_blob"]
   end
 
-  # Class method for searching and filtering movies
   def self.search_and_filter(params)
     movies = Movie.all
 
@@ -29,7 +27,6 @@ class Movie < ApplicationRecord
     movies
   end
 
-  # Class method for creating a movie
   def self.create_movie(params)
     movie = Movie.new(params)
     if movie.save
@@ -39,7 +36,7 @@ class Movie < ApplicationRecord
     end
   end
 
-  # Instance method for updating a movie
+ 
   def update_movie(params)
     if update(params)
       { success: true, movie: self }
