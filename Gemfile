@@ -58,4 +58,5 @@ gem 'cloudinary', '~> 1.16'
 gem "kaminari" # Pagination
 gem 'httparty'
 gem 'googleauth'
+gem 'stripe'
 

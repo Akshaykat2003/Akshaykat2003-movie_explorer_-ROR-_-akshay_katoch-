@@ -755,6 +755,16 @@ paths:
                     updated_at:
                       type: string
                       format: date-time
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Authorization header missing"
     post:
       summary: Create a subscription
       tags:
@@ -771,43 +781,19 @@ paths:
                   type: string
                   enum: [basic, gold, platinum]
                   example: gold
-                payment_id:
-                  type: string
-                  example: pay_123456
-                  nullable: true
               required:
                 - plan
       responses:
         '201':
-          description: Subscription created successfully
+          description: Subscription creation initiated successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  id:
-                    type: integer
-                  user_id:
-                    type: integer
-                  plan:
+                  checkout_url:
                     type: string
-                    enum: [basic, gold, platinum]
-                  status:
-                    type: string
-                    enum: [active, inactive, cancelled]
-                  payment_id:
-                    type: string
-                    nullable: true
-                  expiry_date:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
+                    example: "https://checkout.stripe.com/c/pay/cs_test_..."
         '422':
           description: Subscription creation failed
           content:
@@ -817,163 +803,45 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: "Subscription creation/payment failed"
-  /api/v1/subscriptions/{id}:
+                    example: "Failed to create Stripe customer"
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Authorization header missing"
+  /api/v1/subscriptions/success:
     get:
-      summary: Show a subscription
+      summary: Handle successful subscription payment
       tags:
         - Subscriptions
-      security:
-        - BearerAuth: []
       parameters:
-        - name: id
-          in: path
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+        - name: user_id
+          in: query
           required: true
           schema:
             type: integer
-      responses:
-        '200':
-          description: Subscription retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  user_id:
-                    type: integer
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                  status:
-                    type: string
-                    enum: [active, inactive, cancelled]
-                  payment_id:
-                    type: string
-                    nullable: true
-                  expiry_date:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
-        '404':
-          description: Subscription not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Subscription not found"
-    put:
-      summary: Update a subscription
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
+            example: 5
+        - name: plan
+          in: query
           required: true
           schema:
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                subscription:
-                  type: object
-                  properties:
-                    plan:
-                      type: string
-                      enum: [basic, gold, platinum]
-                      example: platinum
-                    status:
-                      type: string
-                      enum: [active, inactive, cancelled]
-                      example: active
-                    payment_id:
-                      type: string
-                      example: pay_123456
-                      nullable: true
-              required:
-                - subscription
+            type: string
+            enum: [basic, gold, platinum]
+            example: gold
       responses:
-        '200':
-          description: Subscription updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  user_id:
-                    type: integer
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                  status:
-                    type: string
-                    enum: [active, inactive, cancelled]
-                  payment_id:
-                    type: string
-                    nullable: true
-                  expiry_date:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
-        '404':
-          description: Subscription not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Subscription not found"
-        '422':
-          description: Validation errors
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  errors:
-                    type: array
-                    items:
-                      type: string
-    delete:
-      summary: Delete a subscription
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Subscription deleted successfully
+        '201':
+          description: Subscription created successfully
           content:
             application/json:
               schema:
@@ -981,9 +849,45 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: "Subscription deleted successfully"
+                    example: "Subscription created successfully"
+                  subscription:
+                    type: object
+                    properties:
+                      id:
+                        type: integer
+                      user_id:
+                        type: integer
+                      plan:
+                        type: string
+                        enum: [basic, gold, platinum]
+                      status:
+                        type: string
+                        enum: [active, inactive, cancelled]
+                      payment_id:
+                        type: string
+                        nullable: true
+                      expiry_date:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      created_at:
+                        type: string
+                        format: date-time
+                      updated_at:
+                        type: string
+                        format: date-time
+        '401':
+          description: User not authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "User not authenticated"
         '404':
-          description: Subscription not found
+          description: User not found
           content:
             application/json:
               schema:
@@ -991,9 +895,9 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: "Subscription not found"
+                    example: "User not found"
         '422':
-          description: Failed to delete subscription
+          description: Invalid plan or payment failure
           content:
             application/json:
               schema:
@@ -1001,7 +905,23 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: "Failed to delete subscription"
+                    example: "Invalid plan"
+  /api/v1/subscriptions/cancel:
+    get:
+      summary: Handle subscription cancellation
+      tags:
+        - Subscriptions
+      responses:
+        '200':
+          description: Subscription creation cancelled
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Subscription creation cancelled"
 servers:
   - url: http://localhost:3000
     description: Development server

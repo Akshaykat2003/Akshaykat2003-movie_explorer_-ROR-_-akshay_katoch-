@@ -1,4 +1,5 @@
 Rails.application.routes.draw do
+  # Swagger docs
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
 
@@ -11,26 +12,24 @@ Rails.application.routes.draw do
       
       # Notification routes
       post 'update_preferences', to: 'users#update_preferences'
-      post 'notifications/test', to: 'notifications#test'
 
-      # Custom routes for movies
-      get 'movies', to: 'movies#index'
-      get 'movies/:id', to: 'movies#show'
-      post 'movies', to: 'movies#create'
-      patch 'movies/:id', to: 'movies#update'
-      put 'movies/:id', to: 'movies#update'
-      delete 'movies/:id', to: 'movies#destroy'
+      # Movie routes
+      get    'movies',       to: 'movies#index'
+      get    'movies/:id',   to: 'movies#show'
+      post   'movies',       to: 'movies#create'
+      patch  'movies/:id',   to: 'movies#update'
+      put    'movies/:id',   to: 'movies#update'
+      delete 'movies/:id',   to: 'movies#destroy'
 
-      # Custom routes for subscriptions
-      get 'subscriptions', to: 'subscriptions#index'
-      get 'subscriptions/:id', to: 'subscriptions#show'
-      post 'subscriptions', to: 'subscriptions#create'
-      patch 'subscriptions/:id', to: 'subscriptions#update'
-      put 'subscriptions/:id', to: 'subscriptions#update'
-      delete 'subscriptions/:id', to: 'subscriptions#destroy'
+      # Subscription routes for user
+      get    'subscriptions',          to: 'subscriptions#index'
+      post   'subscriptions',          to: 'subscriptions#create'
+      get    'subscriptions/success',  to: 'subscriptions#success'
+      get    'subscriptions/cancel',   to: 'subscriptions#cancel'
     end
   end
 
+  # Admin authentication and dashboard
   devise_for :admin_users, ActiveAdmin::Devise.config
   ActiveAdmin.routes(self)
 end
