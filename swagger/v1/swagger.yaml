@@ -250,50 +250,7 @@ paths:
                     items:
                       type: string
                     example: ["Device token is too long", "Notifications enabled is not included in the list"]
-  /api/v1/notifications/test:
-    post:
-      summary: Send a test push notification (Supervisor/Admin only)
-      tags:
-        - Notifications
-      security:
-        - BearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties: {}
-      responses:
-        '200':
-          description: Test notification sent or no eligible devices
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Test notification sent"
-        '403':
-          description: Forbidden (requires supervisor or admin role)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Forbidden: You do not have permission to perform this action"
-        '422':
-          description: Failed to send notification
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Failed to send notification to some devices"
+  
   /api/v1/movies:
     get:
       summary: List movies
