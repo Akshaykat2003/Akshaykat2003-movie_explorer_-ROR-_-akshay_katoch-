@@ -2,8 +2,6 @@ class ApplicationController < ActionController::Base
   protect_from_forgery with: :exception, unless: -> { request.format.json? }
   before_action :authenticate_request
 
-  attr_reader :current_user
-
   private
 
   def authenticate_request
@@ -14,7 +12,6 @@ class ApplicationController < ActionController::Base
     if header.present?
       token = header.split(' ').last
 
-     
       if BlacklistedToken.blacklisted?(token)
         render json: { error: 'Token has been invalidated. Please log in again.' }, status: :unauthorized
         return
@@ -27,5 +24,9 @@ class ApplicationController < ActionController::Base
     else
       render json: { error: 'Authorization header missing' }, status: :unauthorized
     end
+  end
+
+  def current_user
+    @current_user
   end
 end
