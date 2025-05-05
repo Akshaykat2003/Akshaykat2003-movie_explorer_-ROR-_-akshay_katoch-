@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_05_04_113137) do
+ActiveRecord::Schema[7.1].define(version: 2025_05_05_052100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -69,6 +69,14 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_04_113137) do
     t.index ["reset_password_token"], name: "index_admin_users_on_reset_password_token", unique: true
   end
 
+  create_table "blacklisted_tokens", force: :cascade do |t|
+    t.string "token", null: false
+    t.datetime "expires_at", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["token"], name: "index_blacklisted_tokens_on_token", unique: true
+  end
+
   create_table "movies", force: :cascade do |t|
     t.string "title"
     t.string "genre"
@@ -80,6 +88,21 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_04_113137) do
     t.integer "plan", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+  end
+
+  create_table "payments", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "subscription_id", null: false
+    t.string "payment_id"
+    t.string "status"
+    t.decimal "amount"
+    t.string "plan"
+    t.datetime "transaction_time"
+    t.string "failure_reason"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["subscription_id"], name: "index_payments_on_subscription_id"
+    t.index ["user_id"], name: "index_payments_on_user_id"
   end
 
   create_table "subscriptions", force: :cascade do |t|
@@ -102,12 +125,14 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_04_113137) do
     t.string "role"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "stripe_customer_id"
     t.boolean "notifications_enabled", default: true
     t.string "device_token"
-    t.index ["device_token"], name: "index_users_on_device_token", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "payments", "subscriptions"
+  add_foreign_key "payments", "users"
   add_foreign_key "subscriptions", "users"
 end

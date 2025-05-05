@@ -7,9 +7,10 @@ Rails.application.routes.draw do
       # User authentication routes
       post 'signup', to: 'users#signup'
       post 'login', to: 'users#login'
+      post 'logout', to: 'users#logout'
       
       # Notification routes
-      post 'push_registration', to: 'push_registrations#create'
+      post 'update_preferences', to: 'users#update_preferences'
       post 'notifications/test', to: 'notifications#test'
 
       # Custom routes for movies
