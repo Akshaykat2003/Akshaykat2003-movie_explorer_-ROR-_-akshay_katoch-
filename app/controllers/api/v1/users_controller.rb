@@ -3,9 +3,7 @@ class Api::V1::UsersController < ApplicationController
   skip_before_action :authenticate_request, only: [:signup, :login]
 
   def signup
-  
     result = User.register(user_params.merge(role: 'user'))
-
     if result[:success]
       user = result[:user]
       token = user.generate_jwt
@@ -34,6 +32,14 @@ class Api::V1::UsersController < ApplicationController
       }, status: :ok
     else
       render json: { error: "Invalid email or password" }, status: :unauthorized
+    end
+  end
+
+  def update_preferences
+    if @current_user.update(notifications_enabled: params[:notifications_enabled])
+      render json: { message: "Notification preferences updated" }, status: :ok
+    else
+      render json: { errors: @current_user.errors.full_messages }, status: :unprocessable_entity
     end
   end
 

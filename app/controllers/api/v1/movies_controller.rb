@@ -3,8 +3,8 @@ module Api
     class MoviesController < ApplicationController
       before_action :set_movie, only: [:show, :update, :destroy]
       before_action :authorize_supervisor_or_admin, only: [:create, :update, :destroy]
+      skip_before_action :verify_authenticity_token
 
-    
       skip_before_action :authenticate_request, only: [:index, :show]
       skip_before_action :authorize_supervisor_or_admin, only: [:index, :show]
 
@@ -14,10 +14,9 @@ module Api
         render json: {
           movies: paginated_movies.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]),
           total_pages: paginated_movies.total_pages,
-          current_page: paginated_movies.current_page 
+          current_page: paginated_movies.current_page
         }, status: :ok
       rescue StandardError => e
-
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
@@ -27,25 +26,22 @@ module Api
           methods: [:poster_url, :banner_url]
         ), status: :ok
       rescue StandardError => e
-       
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
       def create
-        
         result = Movie.create_movie(movie_params)
         if result[:success]
+          send_new_movie_notification(result[:movie])
           render json: result[:movie].as_json(methods: [:poster_url, :banner_url]), status: :created
         else
           render json: { error: result[:errors] }, status: :unprocessable_entity
         end
       rescue StandardError => e
-       
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
       def update
-       
         result = @movie.update_movie(movie_params)
         if result[:success]
           render json: result[:movie].as_json(methods: [:poster_url, :banner_url]), status: :ok
@@ -53,17 +49,13 @@ module Api
           render json: { error: result[:errors] }, status: :unprocessable_entity
         end
       rescue StandardError => e
- 
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
       def destroy
-  
         @movie.destroy
-   
         render json: { message: "Movie deleted successfully" }, status: :ok
       rescue StandardError => e
-      
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
@@ -73,7 +65,7 @@ module Api
         @movie = Movie.find(params[:id])
       rescue ActiveRecord::RecordNotFound
         render json: { error: "Movie not found" }, status: :not_found
-        return 
+        return
       end
 
       def movie_params
@@ -82,10 +74,24 @@ module Api
 
       def authorize_supervisor_or_admin
         unless @current_user&.role&.in?(['supervisor', 'admin'])
-
           render json: { error: 'Forbidden: You do not have permission to perform this action' }, status: :forbidden
-          return 
+          return
         end
+      end
+
+      def send_new_movie_notification(movie)
+        tokens = User.where(notifications_enabled: true).where.not(device_token: nil).pluck(:device_token)
+        return if tokens.empty?
+
+        FirebaseService.send_notification(
+          tokens: tokens,
+          title: "New Movie Added!",
+          body: "#{movie.title} has been added to Movie Explorer+.",
+          data: {
+            movie_id: movie.id.to_s,
+            url: "/movies/#{movie.id}"
+          }
+        )
       end
     end
   end
