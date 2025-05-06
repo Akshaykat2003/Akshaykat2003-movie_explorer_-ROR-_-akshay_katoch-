@@ -26,7 +26,7 @@ module Api
         render json: @movie.as_json(
           only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan],
           methods: [:poster_url, :banner_url]
-        ), status: :ok
+        }, status: :ok
       rescue => e
         Rails.logger.error "Error in MoviesController#show: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
@@ -69,7 +69,7 @@ module Api
       rescue => e
         Rails.logger.error "Error in MoviesController#update: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
-        render json: { error: "Internal server error" }, status :internal_server_error
+        render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
       def destroy

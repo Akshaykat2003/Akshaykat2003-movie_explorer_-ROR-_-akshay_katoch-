@@ -10,8 +10,7 @@ module Api
           render json: { error: "Missing required parameters: device_token and notification are required" }, status: :bad_request
           return
         end
-
-        
+                
         result = FirebaseService.send_notification(
           tokens: [notification_params[:device_token]],
           title: notification_params[:notification][:title],
