@@ -69,7 +69,7 @@ module Api
       rescue => e
         Rails.logger.error "Error in MoviesController#update: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
-        render json: { error: "Internal server error" }, status: :internal_server_error
+        render json: { error: "Internal server error" }, status :internal_server_error
       end
 
       def destroy
@@ -110,21 +110,22 @@ module Api
 
         Rails.logger.info("Sending notification to tokens: #{tokens}, title: New Movie Added!, body: '#{movie.title} has been added to Movie Explorer+.', data: #{ { movie_id: movie.id.to_s, url: "/movies/#{movie.id}" }.inspect }")
 
-        result = FirebaseService.send_notification(
-          tokens: tokens,
-          title: "New Movie Added!",
-          body: "#{movie.title} has been added to Movie Explorer+.",
-          data: {
-            movie_id: movie.id.to_s,
-            url: "/movies/#{movie.id}"
-          }
+        fcm_service = FcmService.new
+        result = fcm_service.send_notification(
+          tokens,
+          "New Movie Added!",
+          "#{movie.title} has been added to Movie Explorer+.",
+          movie_id: movie.id.to_s,
+          url: "/movies/#{movie.id}"
         )
 
-        if result[:success]
+        if result[:status_code] == 200
           Rails.logger.info("Notification sent successfully for movie #{movie.id}")
         else
-          Rails.logger.warn("Notification failed for movie #{movie.id}: #{result[:errors].join(', ')}")
+          Rails.logger.warn("Notification failed for movie #{movie.id}: #{result[:body]}")
         end
+      rescue StandardError => e
+        Rails.logger.error("Failed to send new movie notification for movie #{movie.id}: #{e.message}\n#{e.backtrace.join("\n")}")
       end
     end
   end
