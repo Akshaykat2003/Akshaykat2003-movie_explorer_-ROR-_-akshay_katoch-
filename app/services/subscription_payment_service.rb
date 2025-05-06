@@ -1,6 +1,4 @@
 class SubscriptionPaymentService
-  include Rails.application.routes.url_helpers
-
   def self.process_payment(user:, plan:)
     return { success: false, error: 'Invalid plan' } unless Subscription.plans.key?(plan)
 
@@ -8,10 +6,25 @@ class SubscriptionPaymentService
     return { success: false, error: 'Failed to create Stripe customer' } unless customer
 
     price_id = case plan
-               when 'basic' then Rails.application.credentials.stripe[:price_basic_monthly] || 'price_basic_monthly'
-               when 'gold' then Rails.application.credentials.stripe[:price_gold_monthly] || 'price_gold_monthly'
-               when 'platinum' then Rails.application.credentials.stripe[:price_platinum_monthly] || 'price_platinum_monthly'
+               when 'basic' then Rails.application.credentials.stripe[:price_basic_monthly]
+               when 'gold' then Rails.application.credentials.stripe[:price_gold_monthly]
+               when 'platinum' then Rails.application.credentials.stripe[:price_platinum_monthly]
                end
+
+    unless price_id
+      Rails.logger.error "Missing price_id for plan: #{plan}"
+      return { success: false, error: "Missing price configuration for plan: #{plan}" }
+    end
+
+    Rails.logger.info "Using price_id: #{price_id} for plan: #{plan}"
+
+    # Set default URL options for generating full URLs
+    default_url_options = { host: Rails.env.production? ? 'https://movie-explorer-rorakshaykat2003-movie.onrender.com' : 'http://localhost:3000' }
+
+    # Use Rails.application.routes.url_helpers explicitly
+    url_helpers = Rails.application.routes.url_helpers
+    success_url = "#{url_helpers.api_v1_subscriptions_success_url(default_url_options)}?session_id={CHECKOUT_SESSION_ID}"
+    cancel_url = url_helpers.api_v1_subscriptions_cancel_url(default_url_options)
 
     session = Stripe::Checkout::Session.create(
       customer: customer.id,
@@ -21,14 +34,20 @@ class SubscriptionPaymentService
         quantity: 1
       }],
       mode: 'subscription',
-      success_url: "#{api_v1_subscriptions_success_url}?session_id={CHECKOUT_SESSION_ID}&user_id=#{user.id}&plan=#{plan}",
-      cancel_url: api_v1_subscriptions_cancel_url
+      success_url: success_url,
+      cancel_url: cancel_url,
+      metadata: {
+        user_id: user.id.to_s,
+        plan: plan
+      }
     )
 
-    { success: true, checkout_url: session.url }
+    { success: true, session_id: session.id }
   rescue Stripe::StripeError => e
+    Rails.logger.error "Stripe error: #{e.message}"
     { success: false, error: e.message }
   rescue StandardError => e
+    Rails.logger.error "Unexpected error: #{e.message}"
     { success: false, error: 'An unexpected error occurred' }
   end
 

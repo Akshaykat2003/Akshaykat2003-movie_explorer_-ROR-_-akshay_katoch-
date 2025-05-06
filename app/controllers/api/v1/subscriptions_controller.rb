@@ -14,22 +14,31 @@ module Api
       end
 
       def create
+        unless params[:plan]
+          render json: { error: 'Plan is required' }, status: :unprocessable_entity and return
+        end
+
         result = SubscriptionPaymentService.process_payment(
           user: @current_user,
           plan: params[:plan]
         )
 
         if result[:success]
-          render json: { checkout_url: result[:checkout_url] }, status: :created
+          render json: { session_id: result[:session_id] }, status: :created
         else
           render json: { error: result[:error] }, status: :unprocessable_entity
         end
       end
 
       def success
-        user_id = params[:user_id]
-        unless user_id
-          render json: { error: 'User not authenticated' }, status: :unauthorized and return
+        session_id = params[:session_id]
+        session = Stripe::Checkout::Session.retrieve(session_id)
+
+        user_id = session.metadata&.user_id
+        plan = session.metadata&.plan
+
+        unless user_id && plan
+          render json: { error: 'Missing user_id or plan in session metadata' }, status: :unprocessable_entity and return
         end
 
         user = User.find_by(id: user_id)
@@ -37,14 +46,13 @@ module Api
           render json: { error: 'User not found' }, status: :not_found and return
         end
 
-        plan = params[:plan]
         unless Subscription.plans.key?(plan)
           render json: { error: 'Invalid plan' }, status: :unprocessable_entity and return
         end
 
         result = SubscriptionPaymentService.complete_payment(
           user: user,
-          session_id: params[:session_id],
+          session_id: session_id,
           plan: plan
         )
 

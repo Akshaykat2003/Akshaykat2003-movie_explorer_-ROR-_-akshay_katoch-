@@ -28,15 +28,16 @@ class Movie < ApplicationRecord
   end
 
   def self.create_movie(params)
-    movie = Movie.new(params)
+    movie = Movie.new(params.except(:poster, :banner))
     if movie.save
+      movie.poster.attach(params[:poster]) if params[:poster].present?
+      movie.banner.attach(params[:banner]) if params[:banner].present?
       { success: true, movie: movie }
     else
       { success: false, errors: movie.errors.full_messages }
     end
   end
 
- 
   def update_movie(params)
     if update(params)
       { success: true, movie: self }
@@ -45,12 +46,25 @@ class Movie < ApplicationRecord
     end
   end
 
-
   def poster_url
-    Rails.application.routes.url_helpers.rails_blob_path(poster, only_path: true) if poster.attached?
+    if poster.attached?
+      begin
+        Cloudinary::Utils.cloudinary_url(poster.key, resource_type: :image)
+      rescue StandardError => e
+        Rails.logger.error "Failed to generate poster_url for movie #{id}: #{e.message}"
+        nil
+      end
+    end
   end
 
   def banner_url
-    Rails.application.routes.url_helpers.rails_blob_path(banner, only_path: true) if banner.attached?
+    if banner.attached?
+      begin
+        Cloudinary::Utils.cloudinary_url(banner.key, resource_type: :image)
+      rescue StandardError => e
+        Rails.logger.error "Failed to generate banner_url for movie #{id}: #{e.message}"
+        nil
+      end
+    end
   end
 end

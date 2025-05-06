@@ -9,6 +9,9 @@ class FirebaseService
     # Fetch service account credentials from Rails credentials
     service_account = Rails.application.credentials.dig(:fcm, :service_account)
 
+    # Ensure the private_key includes newlines
+    service_account[:private_key] = service_account[:private_key].gsub('\n', "\n")
+
     # Configure the authorizer using the service account
     authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
       json_key_io: StringIO.new(service_account.to_json),
@@ -17,6 +20,9 @@ class FirebaseService
 
     # Fetch the access token
     authorizer.fetch_access_token!["access_token"]
+  rescue StandardError => e
+    Rails.logger.error "Failed to fetch Firebase access token: #{e.message}"
+    raise
   end
 
   def self.send_notification(tokens:, title:, body:, data: {})

@@ -33,18 +33,25 @@ module Api
         result = Movie.create_movie(movie_params)
         if result[:success]
           send_new_movie_notification(result[:movie])
-          render json: result[:movie].as_json(methods: [:poster_url, :banner_url]), status: :created
+          render json: result[:movie].as_json(
+            only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan],
+            methods: [:poster_url, :banner_url]
+          ), status: :created
         else
           render json: { error: result[:errors] }, status: :unprocessable_entity
         end
       rescue StandardError => e
+        Rails.logger.error "Error in MoviesController#create: #{e.message}"
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
       def update
         result = @movie.update_movie(movie_params)
         if result[:success]
-          render json: result[:movie].as_json(methods: [:poster_url, :banner_url]), status: :ok
+          render json: result[:movie].as_json(
+            only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan],
+            methods: [:poster_url, :banner_url]
+          ), status: :ok
         else
           render json: { error: result[:errors] }, status: :unprocessable_entity
         end
@@ -83,7 +90,7 @@ module Api
         tokens = User.where(notifications_enabled: true).where.not(device_token: nil).pluck(:device_token)
         return if tokens.empty?
 
-        FirebaseService.send_notification(
+        response = FirebaseService.send_notification(
           tokens: tokens,
           title: "New Movie Added!",
           body: "#{movie.title} has been added to Movie Explorer+.",
@@ -92,6 +99,11 @@ module Api
             url: "/movies/#{movie.id}"
           }
         )
+        if response[:error]
+          Rails.logger.warn "Notification failed for movie #{movie.id}: #{response[:error]}"
+        end
+      rescue StandardError => e
+        Rails.logger.warn "Failed to send notification for movie #{movie.id}: #{e.message}"
       end
     end
   end

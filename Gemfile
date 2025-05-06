@@ -60,3 +60,4 @@ gem 'httparty'
 gem 'googleauth'
 gem 'stripe'
 
+
