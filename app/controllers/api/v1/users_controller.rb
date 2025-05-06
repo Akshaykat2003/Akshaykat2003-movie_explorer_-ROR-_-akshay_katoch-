@@ -37,14 +37,26 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def update_preferences
+    unless current_user
+      Rails.logger.warn("Failed to update preferences: No authenticated user found")
+      render json: { errors: ["Authentication required"] }, status: :unauthorized
+      return
+    end
+
     update_params = params.permit(:device_token, :notifications_enabled).to_h
     update_params[:notifications_enabled] = update_params[:notifications_enabled] != false if update_params.key?(:notifications_enabled)
-  
-    if current_user&.update(update_params)
+
+    if current_user.update(update_params)
+      Rails.logger.info("User #{current_user.id} updated preferences: device_token=#{current_user.device_token}, notifications_enabled=#{current_user.notifications_enabled}")
       render json: { message: "Preferences updated successfully" }, status: :ok
     else
-      render json: { errors: current_user&.errors&.full_messages || ["User not found"] }, status: :unprocessable_entity
+      Rails.logger.warn("Failed to update preferences for user #{current_user.id}: #{current_user.errors.full_messages.join(', ')}")
+      render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
     end
+  rescue StandardError => e
+    Rails.logger.error("Error in UsersController#update_preferences: #{e.message}")
+    Rails.logger.error(e.backtrace.join("\n"))
+    render json: { errors: ["Internal server error"] }, status: :internal_server_error
   end
 
 

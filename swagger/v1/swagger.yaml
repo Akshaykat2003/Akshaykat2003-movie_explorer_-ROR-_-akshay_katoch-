@@ -1,7 +1,8 @@
-openapi: 3.0.1
+openapi: 3.0.3
 info:
-  title: Movie Explorer+ API
-  version: v1
+  title: Movie Explorer API
+  version: 1.0.0
+  description: API documentation for the Movie Explorer application
 components:
   securitySchemes:
     BearerAuth:
@@ -9,6 +10,145 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions)
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        first_name:
+          type: string
+          example: Akshay
+        last_name:
+          type: string
+          example: Katoch
+        email:
+          type: string
+          example: akshaykatoch38@gmail.com
+        mobile_number:
+          type: string
+          example: "9876543210"
+        role:
+          type: string
+          example: user
+          enum: [user, supervisor]
+        notifications_enabled:
+          type: boolean
+          example: true
+        device_token:
+          type: string
+          example: "fcm-device-token-here"
+          nullable: true
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - mobile_number
+        - role
+        - notifications_enabled
+    Movie:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 5
+        title:
+          type: string
+          example: "John wick"
+        genre:
+          type: string
+          example: "Action"
+        release_year:
+          type: integer
+          example: 2014
+        rating:
+          type: number
+          format: float
+          example: 8.8
+        director:
+          type: string
+          example: "Chad Stahelski"
+        duration:
+          type: integer
+          example: 120
+        description:
+          type: string
+          example: "John Wick's style of shooting baddi"
+        plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: "basic"
+        poster_url:
+          type: string
+          format: uri
+          example: "https://res.cloudinary.com/your_cloud_name/image/upload/wq8l3kjul0rrg9waibpbc321xys9"
+        banner_url:
+          type: string
+          format: uri
+          example: "https://res.cloudinary.com/your_cloud_name/image/upload/b5wfyzgjh1wq2rfla7xtv8uszzeq"
+      required:
+        - id
+        - title
+        - genre
+        - release_year
+        - rating
+        - plan
+        - poster_url
+        - banner_url
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: platinum
+        status:
+          type: string
+          enum: [active, inactive, cancelled]
+          example: active
+        payment_id:
+          type: string
+          nullable: true
+          example: "pay_123"
+        expiry_date:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-06-06T12:00:00Z"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-05-06T12:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-05-06T12:00:00Z"
+      required:
+        - id
+        - user_id
+        - plan
+        - status
+        - created_at
+        - updated_at
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+      example:
+        errors: ["Error message 1", "Error message 2"]
 paths:
   /api/v1/signup:
     post:
@@ -58,39 +198,15 @@ paths:
                     type: string
                     example: "eyJhbGciOiJIUzI1NiJ9..."
                   user:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                        example: 1
-                      first_name:
-                        type: string
-                        example: Akshay
-                      last_name:
-                        type: string
-                        example: Katoch
-                      email:
-                        type: string
-                        example: akshaykatoch38@gmail.com
-                      mobile_number:
-                        type: string
-                        example: "9876543210"
-                      role:
-                        type: string
-                        example: user
-                        enum: [user, supervisor]
+                    $ref: '#/components/schemas/User'
         '422':
           description: Invalid input
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  errors:
-                    type: array
-                    items:
-                      type: string
-                    example: ["Email has already been taken", "Password is too short (minimum is 6 characters)"]
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Email has already been taken", "Password is too short (minimum is 6 characters)"]
   /api/v1/login:
     post:
       summary: Login user
@@ -139,16 +255,19 @@ paths:
                         type: string
                         example: user
                         enum: [user, supervisor]
+                    required:
+                      - id
+                      - name
+                      - email
+                      - role
         '401':
           description: Invalid credentials
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Invalid email or password"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid email or password"
   /api/v1/logout:
     post:
       summary: Logout user
@@ -156,12 +275,6 @@ paths:
         - Users
       security:
         - BearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties: {}
       responses:
         '200':
           description: Logout successful
@@ -178,21 +291,17 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Authorization header missing"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authorization header missing"
         '422':
           description: Invalid token
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Invalid token"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid token"
   /api/v1/update_preferences:
     post:
       summary: Update user preferences
@@ -233,141 +342,26 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Token has been invalidated. Please log in again."
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authentication required"]
         '422':
           description: Invalid input
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  errors:
-                    type: array
-                    items:
-                      type: string
-                    example: ["Device token is too long", "Notifications enabled is not included in the list"]
-  /api/v1/notifications/test:
-    post:
-      summary: Send a test push notification (Supervisor/Admin only)
-      tags:
-        - Notifications
-      security:
-        - BearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties: {}
-      responses:
-        '200':
-          description: Test notification sent or no eligible devices
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Device token is too long"]
+        '500':
+          description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Test notification sent"
-        '403':
-          description: Forbidden (requires supervisor or admin role)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Forbidden: You do not have permission to perform this action"
-        '422':
-          description: Failed to send notification
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Failed to send notification to some devices"
-  /api/v1/send_notification:
-    post:
-      summary: Send a custom FCM push notification (Supervisor/Admin only)
-      description: Sends a custom push notification to a specific device using Firebase Cloud Messaging (FCM). Requires a device token and notification payload.
-      tags:
-        - Notifications
-      security:
-        - BearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                device_token:
-                  type: string
-                  example: "d6VPCzUvTzGicG21n7PcpC:APA91bFIBiRpdLspgpyRYeCy8vuX96TQG_Fh4LDtSBkubI4slVLymXxgvQwKGTZ9s36H0wrmvoDFWJuZ2wCDJn2mnZ0ec4R1y-TGDxEfnB2FZsJEkBPr1dozm9yDZnVy9ojem8UYDf0P"
-                  description: FCM device token of the target device
-                notification:
-                  type: object
-                  properties:
-                    title:
-                      type: string
-                      example: "New Movie Added"
-                    body:
-                      type: string
-                      example: "Check out the latest movie: John Wick!"
-                  required:
-                    - title
-                    - body
-              required:
-                - device_token
-                - notification
-      responses:
-        '200':
-          description: Notification sent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Notification sent successfully"
-        '401':
-          description: Unauthorized (invalid or missing JWT token)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Token has been invalidated. Please log in again."
-        '403':
-          description: Forbidden (requires supervisor or admin role)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Forbidden: You do not have permission to perform this action"
-        '422':
-          description: Invalid input or failed to send notification
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Invalid device token or FCM failure: Token <token>: <fcm_error_message>"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Internal server error"]
+ 
   /api/v1/movies:
     get:
       summary: List movies
@@ -403,54 +397,7 @@ paths:
                   movies:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                          example: 1
-                        title:
-                          type: string
-                          example: "John wick"
-                        genre:
-                          type: string
-                          example: "Action"
-                        release_year:
-                          type: integer
-                          example: 2014
-                        rating:
-                          type: number
-                          format: float
-                          example: 8.8
-                        director:
-                          type: string
-                          example: "Chad Stahelski"
-                        duration:
-                          type: integer
-                          example: 120
-                        description:
-                          type: string
-                          example: "John Wick's style of shooting baddi"
-                        plan:
-                          type: string
-                          enum: [basic, gold, platinum]
-                          example: "basic"
-                        poster_url:
-                          type: string
-                          format: uri
-                          example: "https://res.cloudinary.com/your_cloud_name/image/upload/wq8l3kjul0rrg9waibpbc321xys9"
-                        banner_url:
-                          type: string
-                          format: uri
-                          example: "https://res.cloudinary.com/your_cloud_name/image/upload/b5wfyzgjh1wq2rfla7xtv8uszzeq"
-                      required:
-                        - id
-                        - title
-                        - genre
-                        - release_year
-                        - rating
-                        - plan
-                        - poster_url
-                        - banner_url
+                      $ref: '#/components/schemas/Movie'
                   total_pages:
                     type: integer
                     example: 1
@@ -462,11 +409,9 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Internal server error"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Internal server error"]
     post:
       summary: Create a movie
       tags:
@@ -527,76 +472,31 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                    example: 5
-                  title:
-                    type: string
-                    example: "John wick"
-                  genre:
-                    type: string
-                    example: "Action"
-                  release_year:
-                    type: integer
-                    example: 2014
-                  rating:
-                    type: number
-                    format: float
-                    example: 8.8
-                  director:
-                    type: string
-                    example: "Chad Stahelski"
-                  duration:
-                    type: integer
-                    example: 120
-                  description:
-                    type: string
-                    example: "John Wick's style of shooting baddi"
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                    example: "basic"
-                  poster_url:
-                    type: string
-                    format: uri
-                    example: "https://res.cloudinary.com/your_cloud_name/image/upload/wq8l3kjul0rrg9waibpbc321xys9"
-                  banner_url:
-                    type: string
-                    format: uri
-                    example: "https://res.cloudinary.com/your_cloud_name/image/upload/b5wfyzgjh1wq2rfla7xtv8uszzeq"
-                required:
-                  - id
-                  - title
-                  - genre
-                  - release_year
-                  - rating
-                  - plan
-                  - poster_url
-                  - banner_url
+                $ref: '#/components/schemas/Movie'
         '403':
           description: Forbidden (requires supervisor or admin role)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Forbidden: You do not have permission to perform this action"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Forbidden: You do not have permission to perform this action"]
         '422':
           description: Validation errors
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: array
-                    items:
-                      type: string
-                    example: ["Title can't be blank", "Genre can't be blank"]
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Title can't be blank", "Genre can't be blank"]
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Internal server error"]
   /api/v1/movies/{id}:
     get:
       summary: Show a movie
@@ -614,75 +514,24 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                    example: 5
-                  title:
-                    type: string
-                    example: "John wick"
-                  genre:
-                    type: string
-                    example: "Action"
-                  release_year:
-                    type: integer
-                    example: 2014
-                  rating:
-                    type: number
-                    format: float
-                    example: 8.8
-                  director:
-                    type: string
-                    example: "Chad Stahelski"
-                  duration:
-                    type: integer
-                    example: 120
-                  description:
-                    type: string
-                    example: "John Wick's style of shooting baddi"
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                    example: "basic"
-                  poster_url:
-                    type: string
-                    format: uri
-                    example: "https://res.cloudinary.com/your_cloud_name/image/upload/wq8l3kjul0rrg9waibpbc321xys9"
-                  banner_url:
-                    type: string
-                    format: uri
-                    example: "https://res.cloudinary.com/your_cloud_name/image/upload/b5wfyzgjh1wq2rfla7xtv8uszzeq"
-                required:
-                  - id
-                  - title
-                  - genre
-                  - release_year
-                  - rating
-                  - plan
-                  - poster_url
-                  - banner_url
+                $ref: '#/components/schemas/Movie'
         '404':
           description: Movie not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Movie not found"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Movie not found"]
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Internal server error"
-    put:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Internal server error"]
+    patch:
       summary: Update a movie
       tags:
         - Movies
@@ -740,96 +589,39 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                    example: 5
-                  title:
-                    type: string
-                    example: "John wick Updated"
-                  genre:
-                    type: string
-                    example: "Action"
-                  release_year:
-                    type: integer
-                    example: 2014
-                  rating:
-                    type: number
-                    format: float
-                    example: 8.8
-                  director:
-                    type: string
-                    example: "Chad Stahelski"
-                  duration:
-                    type: integer
-                    example: 120
-                  description:
-                    type: string
-                    example: "John Wick's style of shooting baddi, updated"
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                    example: "basic"
-                  poster_url:
-                    type: string
-                    format: uri
-                    example: "https://res.cloudinary.com/your_cloud_name/image/upload/wq8l3kjul0rrg9waibpbc321xys9"
-                  banner_url:
-                    type: string
-                    format: uri
-                    example: "https://res.cloudinary.com/your_cloud_name/image/upload/b5wfyzgjh1wq2rfla7xtv8uszzeq"
-                required:
-                  - id
-                  - title
-                  - genre
-                  - release_year
-                  - rating
-                  - plan
-                  - poster_url
-                  - banner_url
+                $ref: '#/components/schemas/Movie'
         '403':
           description: Forbidden (requires supervisor or admin role)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Forbidden: You do not have permission to perform this action"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Forbidden: You do not have permission to perform this action"]
         '404':
           description: Movie not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Movie not found"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Movie not found"]
         '422':
           description: Validation errors
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: array
-                    items:
-                      type: string
-                    example: ["Title can't be blank", "Genre can't be blank"]
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Title can't be blank", "Genre can't be blank"]
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Internal server error"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Internal server error"]
     delete:
       summary: Delete a movie
       tags:
@@ -858,31 +650,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Forbidden: You do not have permission to perform this action"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Forbidden: You do not have permission to perform this action"]
         '404':
           description: Movie not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Movie not found"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Movie not found"]
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Internal server error"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Internal server error"]
   /api/v1/subscriptions:
     get:
       summary: List subscriptions
@@ -898,41 +684,15 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    user_id:
-                      type: integer
-                    plan:
-                      type: string
-                      enum: [basic, gold, platinum]
-                    status:
-                      type: string
-                      enum: [active, inactive, cancelled]
-                    payment_id:
-                      type: string
-                      nullable: true
-                    expiry_date:
-                      type: string
-                      format: date-time
-                      nullable: true
-                    created_at:
-                      type: string
-                      format: date-time
-                    updated_at:
-                      type: string
-                      format: date-time
+                  $ref: '#/components/schemas/Subscription'
         '401':
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Authorization header missing"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authorization header missing"]
     post:
       summary: Create a subscription
       tags:
@@ -967,21 +727,17 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Failed to create Stripe customer"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Failed to create Stripe customer"]
         '401':
           description: Unauthorized (missing or invalid token)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Authorization header missing"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authorization header missing"]
   /api/v1/subscriptions/success:
     get:
       summary: Handle successful subscription payment
@@ -1006,51 +762,23 @@ paths:
                     type: string
                     example: "Subscription created successfully"
                   subscription:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                      user_id:
-                        type: integer
-                      plan:
-                        type: string
-                        enum: [basic, gold, platinum]
-                      status:
-                        type: string
-                        enum: [active, inactive, cancelled]
-                      payment_id:
-                        type: string
-                        nullable: true
-                      expiry_date:
-                        type: string
-                        format: date-time
-                        nullable: true
-                      created_at:
-                        type: string
-                        format: date-time
-                      updated_at:
-                        type: string
-                        format: date-time
+                    $ref: '#/components/schemas/Subscription'
         '404':
           description: User not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "User not found"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["User not found"]
         '422':
           description: Invalid plan or payment failure
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Missing user_id or plan in session metadata"
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Missing user_id or plan in session metadata"]
   /api/v1/subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
@@ -1070,5 +798,5 @@ paths:
 servers:
   - url: http://localhost:3000
     description: Development server
-  - url: https://movie-explorer-rorakshaykat2003-movie.onrender.com
+  - url: https://movie-explorer-rorakshaykat2003-movie.onrender.com/api/v1
     description: Production server

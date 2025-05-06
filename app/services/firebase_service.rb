@@ -1,77 +1,65 @@
-require 'httparty'
 require 'googleauth'
 
 class FirebaseService
-  FCM_ENDPOINT = "https://fcm.googleapis.com/v1/projects/fir-pushnotification-39474/messages:send"
-  SCOPE = "https://www.googleapis.com/auth/firebase.messaging"
+  class << self
+    def send_notification(tokens:, title:, body:, data: {})
+      access_token = fetch_access_token
+      return { success: false, errors: ["Failed to fetch Firebase access token: #{access_token}"] } unless access_token.is_a?(String)
 
-  def self.access_token
-    # Fetch service account credentials from Rails credentials
-    service_account = Rails.application.credentials.dig(:fcm, :service_account)
+      uri = URI.parse("https://fcm.googleapis.com/v1/projects/#{Rails.application.credentials.dig(:fcm, :service_account, :project_id)}/messages:send")
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true
 
-    # Ensure the private_key includes newlines
-    service_account[:private_key] = service_account[:private_key].gsub('\n', "\n")
+      request = Net::HTTP::Post.new(uri.request_uri)
+      request['Authorization'] = "Bearer #{access_token}"
+      request['Content-Type'] = 'application/json'
 
-    # Configure the authorizer using the service account
-    authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
-      json_key_io: StringIO.new(service_account.to_json),
-      scope: SCOPE
-    )
-
-    # Fetch the access token
-    authorizer.fetch_access_token!["access_token"]
-  rescue StandardError => e
-    Rails.logger.error "Failed to fetch Firebase access token: #{e.message}"
-    raise
-  end
-
-  def self.send_notification(tokens:, title:, body:, data: {})
-    return { success: true, message: "No tokens to send notifications to" } if tokens.empty?
-
-    Rails.logger.info("Sending notification to tokens: #{tokens}, title: #{title}, body: #{body}, data: #{data}")
-
-    failed = false
-    errors = []
-    access_token = self.access_token
-
-    tokens.each do |token|
       message = {
-        token: token,
-        notification: {
-          title: title,
-          body: body
-        },
-        data: data.transform_keys(&:to_s).transform_values(&:to_s)
+        message: {
+          notification: {
+            title: title,
+            body: body
+          },
+          data: data.transform_keys(&:to_s).transform_values(&:to_s),
+          token: nil
+        }
       }
 
-      begin
-        response = HTTParty.post(
-          FCM_ENDPOINT,
-          headers: {
-            "Authorization" => "Bearer #{access_token}",
-            "Content-Type" => "application/json"
-          },
-          body: { message: message }.to_json
-        )
+      errors = []
+      tokens.each do |token|
+        message[:message][:token] = token
+        request.body = message.to_json
 
-        if response.success?
-          Rails.logger.info("FCM Response: #{response.body}")
-        else
-          Rails.logger.error("FCM Error: #{response.body}")
-          failed = true
+        response = http.request(request)
+        unless response.is_a?(Net::HTTPSuccess)
           errors << "Token #{token}: #{response.body}"
         end
-      rescue => e
-        Rails.logger.error("FCM Error: #{e.message}")
-        failed = true
-        errors << "Token #{token}: #{e.message}"
       end
+
+      if errors.empty?
+        { success: true, errors: [] }
+      else
+        { success: false, errors: errors }
+      end
+    rescue StandardError => e
+      { success: false, errors: ["FCM Error: #{e.message}"] }
     end
 
-    if failed
-      { success: false, errors: errors }
-    else
-      { success: true, message: "Notifications sent successfully" }
+    private
+
+    def fetch_access_token
+      credentials = Rails.application.credentials.dig(:fcm, :service_account)
+      unless credentials && credentials[:private_key] && credentials[:private_key].include?('BEGIN PRIVATE KEY')
+        return "Firebase service account credentials are missing or invalid"
+      end
+
+      authorizer = Google::Auth::ServiceAccountCredentials.make_creds(
+        json_key_io: StringIO.new(credentials.to_json),
+        scope: 'https://www.googleapis.com/auth/firebase.messaging'
+      )
+      authorizer.fetch_access_token!['access_token']
+    rescue StandardError => e
+      "Failed to fetch Firebase access token: #{e.message}"
     end
   end
 end
