@@ -294,6 +294,80 @@ paths:
                   error:
                     type: string
                     example: "Failed to send notification to some devices"
+  /api/v1/send_notification:
+    post:
+      summary: Send a custom FCM push notification (Supervisor/Admin only)
+      description: Sends a custom push notification to a specific device using Firebase Cloud Messaging (FCM). Requires a device token and notification payload.
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                device_token:
+                  type: string
+                  example: "d6VPCzUvTzGicG21n7PcpC:APA91bFIBiRpdLspgpyRYeCy8vuX96TQG_Fh4LDtSBkubI4slVLymXxgvQwKGTZ9s36H0wrmvoDFWJuZ2wCDJn2mnZ0ec4R1y-TGDxEfnB2FZsJEkBPr1dozm9yDZnVy9ojem8UYDf0P"
+                  description: FCM device token of the target device
+                notification:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                      example: "New Movie Added"
+                    body:
+                      type: string
+                      example: "Check out the latest movie: John Wick!"
+                  required:
+                    - title
+                    - body
+              required:
+                - device_token
+                - notification
+      responses:
+        '200':
+          description: Notification sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Notification sent successfully"
+        '401':
+          description: Unauthorized (invalid or missing JWT token)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Token has been invalidated. Please log in again."
+        '403':
+          description: Forbidden (requires supervisor or admin role)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Forbidden: You do not have permission to perform this action"
+        '422':
+          description: Invalid input or failed to send notification
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid device token or FCM failure: Token <token>: <fcm_error_message>"
   /api/v1/movies:
     get:
       summary: List movies
