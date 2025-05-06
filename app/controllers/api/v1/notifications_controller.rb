@@ -11,6 +11,7 @@ module Api
           return
         end
 
+        
         result = FirebaseService.send_notification(
           tokens: [notification_params[:device_token]],
           title: notification_params[:notification][:title],

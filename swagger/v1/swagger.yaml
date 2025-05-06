@@ -117,7 +117,7 @@ components:
         payment_id:
           type: string
           nullable: true
-          example: "pay_123"
+          example: "sub_123"
         expiry_date:
           type: string
           format: date-time
@@ -361,7 +361,6 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Internal server error"]
- 
   /api/v1/movies:
     get:
       summary: List movies
@@ -743,6 +742,8 @@ paths:
       summary: Handle successful subscription payment
       tags:
         - Subscriptions
+      security:
+        - BearerAuth: []
       parameters:
         - name: session_id
           in: query
@@ -763,22 +764,22 @@ paths:
                     example: "Subscription created successfully"
                   subscription:
                     $ref: '#/components/schemas/Subscription'
-        '404':
-          description: User not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["User not found"]
         '422':
-          description: Invalid plan or payment failure
+          description: Invalid session or payment failure
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Missing user_id or plan in session metadata"]
+                errors: ["Invalid checkout session"]
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authorization header missing"]
   /api/v1/subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
@@ -795,8 +796,165 @@ paths:
                   message:
                     type: string
                     example: "Subscription creation cancelled"
+  /api/v1/subscriptions/{id}:
+    get:
+      summary: Show a subscription
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subscription retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Subscription not found"]
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authorization header missing"]
+        '422':
+          description: Failed to retrieve subscription status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Failed to retrieve subscription status"]
+    patch:
+      summary: Update a subscription
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                subscription:
+                  type: object
+                  properties:
+                    plan:
+                      type: string
+                      enum: [basic, gold, platinum]
+                      example: platinum
+                    status:
+                      type: string
+                      enum: [active, inactive, cancelled]
+                      example: active
+                    payment_id:
+                      type: string
+                      example: sub_123456
+                      nullable: true
+              required:
+                - subscription
+      responses:
+        '200':
+          description: Subscription updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Subscription not found"]
+        '422':
+          description: Validation errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Plan is invalid"]
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authorization header missing"]
+    delete:
+      summary: Delete a subscription
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subscription deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Subscription deleted successfully"
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Subscription not found"]
+        '422':
+          description: Failed to delete subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Failed to delete subscription"]
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authorization header missing"]
 servers:
   - url: http://localhost:3000
     description: Development server
-  - url: https://movie-explorer-rorakshaykat2003-movie.onrender.com/api/v1
+  - url: https://movie-explorer-rorakshaykat2003-movie.onrender.com
     description: Production server
