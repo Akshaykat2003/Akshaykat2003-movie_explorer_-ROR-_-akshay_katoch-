@@ -88,9 +88,10 @@ module Api
 
       def send_new_movie_notification(movie)
         tokens = User.where(notifications_enabled: true).where.not(device_token: nil).pluck(:device_token)
+        Rails.logger.info("Found #{tokens.count} eligible users for notification: #{tokens}")
         return if tokens.empty?
 
-        response = FirebaseService.send_notification(
+        result = FirebaseService.send_notification(
           tokens: tokens,
           title: "New Movie Added!",
           body: "#{movie.title} has been added to Movie Explorer+.",
@@ -99,11 +100,12 @@ module Api
             url: "/movies/#{movie.id}"
           }
         )
-        if response[:error]
-          Rails.logger.warn "Notification failed for movie #{movie.id}: #{response[:error]}"
+
+        if result[:success]
+          Rails.logger.info("Notification sent successfully for movie #{movie.id}")
+        else
+          Rails.logger.warn("Notification failed for movie #{movie.id}: #{result[:errors].join(', ')}")
         end
-      rescue StandardError => e
-        Rails.logger.warn "Failed to send notification for movie #{movie.id}: #{e.message}"
       end
     end
   end

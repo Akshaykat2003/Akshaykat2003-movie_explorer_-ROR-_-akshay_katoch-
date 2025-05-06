@@ -12,6 +12,7 @@ Rails.application.routes.draw do
       
       # Notification routes
       post 'update_preferences', to: 'users#update_preferences'
+      post 'send_notification', to: 'notifications#send_fcm'
 
       # Movie routes
       get    'movies',       to: 'movies#index'

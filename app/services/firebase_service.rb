@@ -26,11 +26,12 @@ class FirebaseService
   end
 
   def self.send_notification(tokens:, title:, body:, data: {})
-    return if tokens.empty?
+    return { success: true, message: "No tokens to send notifications to" } if tokens.empty?
 
     Rails.logger.info("Sending notification to tokens: #{tokens}, title: #{title}, body: #{body}, data: #{data}")
 
     failed = false
+    errors = []
     access_token = self.access_token
 
     tokens.each do |token|
@@ -58,13 +59,19 @@ class FirebaseService
         else
           Rails.logger.error("FCM Error: #{response.body}")
           failed = true
+          errors << "Token #{token}: #{response.body}"
         end
       rescue => e
         Rails.logger.error("FCM Error: #{e.message}")
         failed = true
+        errors << "Token #{token}: #{e.message}"
       end
     end
 
-    raise "Failed to send notification to some devices" if failed
+    if failed
+      { success: false, errors: errors }
+    else
+      { success: true, message: "Notifications sent successfully" }
+    end
   end
 end
