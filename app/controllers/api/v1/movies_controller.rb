@@ -26,7 +26,7 @@ module Api
         render json: @movie.as_json(
           only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan],
           methods: [:poster_url, :banner_url]
-        }, status: :ok
+        ), status: :ok
       rescue => e
         Rails.logger.error "Error in MoviesController#show: #{e.message}"
         Rails.logger.error e.backtrace.join("\n")
@@ -95,7 +95,7 @@ module Api
 
       def authorize_supervisor_or_admin
         unless @current_user&.role&.in?(%w[supervisor admin])
-          render json: { error: 'Forbidden: You do not have permission to perform this action' }, status: :forbidden
+          render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden
         end
       end
 
