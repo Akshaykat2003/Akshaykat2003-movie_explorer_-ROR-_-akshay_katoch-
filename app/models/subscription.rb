@@ -1,26 +1,21 @@
 class Subscription < ApplicationRecord
-
-
   belongs_to :user
 
   enum plan: { basic: 0, gold: 1, platinum: 2 }
-  enum status: { active: 'active', inactive: 'inactive', cancelled: 'cancelled' }
+  enum status: { pending: 'pending', active: 'active', inactive: 'inactive', cancelled: 'cancelled' }
 
   validates :plan, :status, presence: true
-  validates :payment_id, presence: true, unless: -> { basic? }
+  validates :payment_id, presence: true, unless: -> { basic? || pending? }
 
   before_validation :set_default_status, on: :create
-
 
   def self.ransackable_associations(auth_object = nil)
     ["user"]
   end
 
-
   def self.ransackable_attributes(auth_object = nil)
-    %w[id status created_at updated_at user_id plan]  
+    %w[id status created_at updated_at user_id plan]
   end
-
 
   def plan_duration_in_days
     case plan
@@ -30,7 +25,6 @@ class Subscription < ApplicationRecord
     end
   end
 
-
   def activate!
     if basic?
       update(status: 'active', expiry_date: nil)
@@ -39,12 +33,10 @@ class Subscription < ApplicationRecord
     end
   end
 
-
   def deactivate!
     update(status: 'inactive')
   end
 
- 
   def cancel!
     update(status: 'cancelled')
   end
@@ -72,6 +64,10 @@ class Subscription < ApplicationRecord
   def check_and_deactivate_if_expired
     return if basic?
     deactivate! if expired? && status != 'inactive'
+  end
+
+  def pending?
+    status == 'pending'
   end
 
   private

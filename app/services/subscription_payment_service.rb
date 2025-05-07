@@ -18,13 +18,12 @@ class SubscriptionPaymentService
 
     Rails.logger.info "Using price_id: #{price_id} for plan: #{plan}"
 
-    # Set default URL options for generating full URLs
     default_url_options = { host: Rails.env.production? ? 'https://movie-explorer-rorakshaykat2003-movie.onrender.com' : 'http://localhost:3000' }
-
-    # Use Rails.application.routes.url_helpers explicitly
     url_helpers = Rails.application.routes.url_helpers
     success_url = "#{url_helpers.api_v1_subscriptions_success_url(default_url_options)}?session_id={CHECKOUT_SESSION_ID}"
     cancel_url = url_helpers.api_v1_subscriptions_cancel_url(default_url_options)
+
+    Rails.logger.info "Creating Stripe Checkout session with success_url: #{success_url}, cancel_url: #{cancel_url}"
 
     session = Stripe::Checkout::Session.create(
       customer: customer.id,
@@ -42,7 +41,17 @@ class SubscriptionPaymentService
       }
     )
 
-    { success: true, session_id: session.id }
+    Rails.logger.info "Created Stripe Checkout session: #{session.id}, url: #{session.url}"
+
+    subscription = Subscription.create!(
+      user: user,
+      plan: plan,
+      status: 'pending',
+      session_id: session.id,
+      session_expires_at: Time.at(session.expires_at)
+    )
+
+    { success: true, session_id: session.id, subscription_id: subscription.id }
   rescue Stripe::StripeError => e
     Rails.logger.error "Stripe error: #{e.message}"
     { success: false, error: e.message }
@@ -51,17 +60,44 @@ class SubscriptionPaymentService
     { success: false, error: 'An unexpected error occurred' }
   end
 
-  def self.complete_payment(user:, session_id:, plan:)
+  def self.get_valid_session(user:, session_id:)
+    subscription = Subscription.find_by(user: user, session_id: session_id, status: 'pending')
+    return { success: false, error: 'Session not found or already completed' } unless subscription
+
+    if subscription.session_expires_at < Time.current
+      Rails.logger.info "Session #{session_id} expired at #{subscription.session_expires_at}, generating new session"
+
+      result = process_payment(user: user, plan: subscription.plan)
+      return result if result[:success]
+
+      return { success: false, error: "Failed to generate new session: #{result[:error]}" }
+    end
+
+    { success: true, session_id: session_id, subscription_id: subscription.id }
+  rescue Stripe::StripeError => e
+    Rails.logger.error "Stripe error: #{e.message}"
+    { success: false, error: e.message }
+  rescue StandardError => e
+    Rails.logger.error "Unexpected error: #{e.message}"
+    { success: false, error: 'An unexpected error occurred' }
+  end
+
+  def self.complete_payment(user:, session_id:)
     session = Stripe::Checkout::Session.retrieve(session_id)
     subscription = Stripe::Subscription.retrieve(session.subscription)
 
     return { success: false, error: 'Subscription has no items' } unless subscription.items.data.any?
 
-    sub = Subscription.find_or_initialize_by(user_id: user.id, payment_id: subscription.id)
+    sub = Subscription.find_by(user: user, session_id: session_id, status: 'pending')
+    return { success: false, error: 'Pending subscription not found' } unless sub
+
     sub.assign_attributes(
-      plan: plan,
+      payment_id: subscription.id,
+      plan: sub.plan, # Use the plan from the subscription record
       status: subscription.status == 'active' ? 'active' : 'inactive',
-      expiry_date: Time.at(subscription.items.data[0].current_period_end)
+      expiry_date: Time.at(subscription.items.data[0].current_period_end),
+      session_id: nil,
+      session_expires_at: nil
     )
 
     if sub.save

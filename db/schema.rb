@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_05_05_143954) do
+ActiveRecord::Schema[7.1].define(version: 2025_05_06_172416) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -98,6 +98,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_05_143954) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.datetime "expiry_date"
+    t.string "session_id"
+    t.datetime "session_expires_at"
     t.index ["user_id"], name: "index_subscriptions_on_user_id"
   end
 
@@ -110,9 +112,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_05_143954) do
     t.string "role"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "stripe_customer_id"
     t.boolean "notifications_enabled", default: true
     t.string "device_token"
-    t.index ["device_token"], name: "index_users_on_device_token", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"

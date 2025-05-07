@@ -112,7 +112,7 @@ components:
           example: platinum
         status:
           type: string
-          enum: [active, inactive, cancelled]
+          enum: [pending, active, inactive, cancelled]
           example: active
         payment_id:
           type: string
@@ -122,15 +122,24 @@ components:
           type: string
           format: date-time
           nullable: true
-          example: "2025-06-06T12:00:00Z"
+          example: "2025-11-03T12:00:00Z"
+        session_id:
+          type: string
+          nullable: true
+          example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+        session_expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: "2025-05-07T13:00:00Z"
         created_at:
           type: string
           format: date-time
-          example: "2025-05-06T12:00:00Z"
+          example: "2025-05-07T12:00:00Z"
         updated_at:
           type: string
           format: date-time
-          example: "2025-05-06T12:00:00Z"
+          example: "2025-05-07T12:00:00Z"
       required:
         - id
         - user_id
@@ -320,12 +329,12 @@ paths:
                   type: string
                   example: "fcm-device-token-here"
                   nullable: true
-                  description: FCM device token for push notifications (optional)
+                  description: "FCM device token for push notifications (optional)"
                 notifications_enabled:
                   type: boolean
                   example: true
                   nullable: true
-                  description: Whether the user wants to receive notifications (optional, defaults to true if not provided)
+                  description: "Whether the user wants to receive notifications (optional, defaults to true if not provided)"
       responses:
         '200':
           description: Preferences updated successfully
@@ -669,29 +678,6 @@ paths:
               example:
                 errors: ["Internal server error"]
   /api/v1/subscriptions:
-    get:
-      summary: List subscriptions
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: Subscriptions retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Subscription'
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Authorization header missing"]
     post:
       summary: Create a subscription
       tags:
@@ -721,6 +707,9 @@ paths:
                   session_id:
                     type: string
                     example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                  subscription_id:
+                    type: integer
+                    example: 1
         '422':
           description: Subscription creation failed
           content:
@@ -752,8 +741,8 @@ paths:
             type: string
             example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
       responses:
-        '201':
-          description: Subscription created successfully
+        '200':
+          description: Subscription finalized successfully
           content:
             application/json:
               schema:
@@ -796,9 +785,9 @@ paths:
                   message:
                     type: string
                     example: "Subscription creation cancelled"
-  /api/v1/subscriptions/{id}:
+  /api/v1/subscriptions/{id}/check_status:
     get:
-      summary: Show a subscription
+      summary: Check subscription status
       tags:
         - Subscriptions
       security:
@@ -811,7 +800,7 @@ paths:
             type: integer
       responses:
         '200':
-          description: Subscription retrieved successfully
+          description: Subscription status retrieved successfully
           content:
             application/json:
               schema:
@@ -824,14 +813,6 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Subscription not found"]
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Authorization header missing"]
         '422':
           description: Failed to retrieve subscription status
           content:
@@ -840,111 +821,6 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Failed to retrieve subscription status"]
-    patch:
-      summary: Update a subscription
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                subscription:
-                  type: object
-                  properties:
-                    plan:
-                      type: string
-                      enum: [basic, gold, platinum]
-                      example: platinum
-                    status:
-                      type: string
-                      enum: [active, inactive, cancelled]
-                      example: active
-                    payment_id:
-                      type: string
-                      example: sub_123456
-                      nullable: true
-              required:
-                - subscription
-      responses:
-        '200':
-          description: Subscription updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Subscription'
-        '404':
-          description: Subscription not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Subscription not found"]
-        '422':
-          description: Validation errors
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Plan is invalid"]
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Authorization header missing"]
-    delete:
-      summary: Delete a subscription
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Subscription deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Subscription deleted successfully"
-        '404':
-          description: Subscription not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Subscription not found"]
-        '422':
-          description: Failed to delete subscription
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Failed to delete subscription"]
         '401':
           description: Unauthorized (missing or invalid token)
           content:

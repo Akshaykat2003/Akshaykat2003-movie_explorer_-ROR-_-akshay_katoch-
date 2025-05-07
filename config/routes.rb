@@ -23,10 +23,10 @@ Rails.application.routes.draw do
       delete 'movies/:id',   to: 'movies#destroy'
 
       # Subscription routes for user
-      get    'subscriptions',          to: 'subscriptions#index'
       post   'subscriptions',          to: 'subscriptions#create'
       get    'subscriptions/success',  to: 'subscriptions#success'
       get    'subscriptions/cancel',   to: 'subscriptions#cancel'
+      get    'subscriptions/:id/check_status', to: 'subscriptions#check_subscription_status'
     end
   end
 
