@@ -5,7 +5,8 @@ class Subscription < ApplicationRecord
   enum status: { pending: 'pending', active: 'active', inactive: 'inactive', cancelled: 'cancelled' }
 
   validates :plan, :status, presence: true
-  validates :payment_id, presence: true, unless: -> { basic? || pending? }
+  validates :payment_id, presence: true, uniqueness: true, unless: -> { basic? || pending? }
+  validates :session_expires_at, presence: true, if: -> { pending? }
 
   before_validation :set_default_status, on: :create
 
@@ -17,20 +18,12 @@ class Subscription < ApplicationRecord
     %w[id status created_at updated_at user_id plan]
   end
 
-  def plan_duration_in_days
-    case plan
-    when "gold" then 90
-    when "platinum" then 180
-    else 0
-    end
-  end
-
   def activate!
     if basic?
       update(status: 'active', expiry_date: nil)
     else
-      new_expiry_date = Time.current + plan_duration_in_days.days
-      update(status: 'active', expiry_date: new_expiry_date)
+      # Expiry date should be set by Stripe's current_period_end, not a fixed duration
+      update(status: 'active')
     end
     Rails.logger.info "Subscription #{id} activated with status: active, expiry_date: #{expiry_date}"
   end
@@ -47,9 +40,9 @@ class Subscription < ApplicationRecord
 
   def upgrade_plan(new_plan)
     return false if Subscription.plans[new_plan].nil?
-    new_expiry_date = Time.current + Subscription.new(plan: new_plan).plan_duration_in_days.days
-    update(plan: new_plan, expiry_date: new_expiry_date)
-    Rails.logger.info "Subscription #{id} upgraded to plan: #{new_plan}, expiry_date: #{new_expiry_date}"
+    # Expiry date should be updated via Stripe when the plan changes
+    update(plan: new_plan)
+    Rails.logger.info "Subscription #{id} upgraded to plan: #{new_plan}, expiry_date: #{expiry_date}"
   end
 
   def downgrade_plan(new_plan)

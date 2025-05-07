@@ -52,7 +52,7 @@ class SubscriptionPaymentService
       session_expires_at: Time.at(session.expires_at)
     )
 
-    { success: true, session_id: session.id, subscription_id: subscription.id }
+    { success: true, session_id: session.id, session_url: session.url, subscription_id: subscription.id }
   rescue Stripe::StripeError => e
     Rails.logger.error "Stripe error: #{e.message}"
     { success: false, error: e.message }
@@ -74,7 +74,9 @@ class SubscriptionPaymentService
       return { success: false, error: "Failed to generate new session: #{result[:error]}" }
     end
 
-    { success: true, session_id: session_id, subscription_id: subscription.id }
+    # Retrieve the session to get the URL
+    session = Stripe::Checkout::Session.retrieve(session_id)
+    { success: true, session_id: session_id, session_url: session.url, subscription_id: subscription.id }
   rescue Stripe::StripeError => e
     Rails.logger.error "Stripe error: #{e.message}"
     { success: false, error: e.message }

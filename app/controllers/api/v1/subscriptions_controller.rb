@@ -8,8 +8,10 @@ class Api::V1::SubscriptionsController < ApplicationController
     @result = SubscriptionPaymentService.process_payment(user: @current_user, plan: subscription_params[:plan])
 
     if @result[:success]
-      logger.info "Subscription created successfully with session_id: #{@result[:session_id]}"
-      render json: { session_id: @result[:session_id], subscription_id: @result[:subscription_id] }, status: :created
+      # Retrieve the Stripe session to get the URL
+      session = Stripe::Checkout::Session.retrieve(@result[:session_id])
+      logger.info "Subscription created successfully with session_id: #{@result[:session_id]}, url: #{session.url}"
+      render json: { checkout_url: session.url, session_id: @result[:session_id], subscription_id: @result[:subscription_id] }, status: :created
     else
       logger.error "Failed to create subscription: #{@result[:error]}"
       render json: { error: @result[:error] }, status: :unprocessable_entity
