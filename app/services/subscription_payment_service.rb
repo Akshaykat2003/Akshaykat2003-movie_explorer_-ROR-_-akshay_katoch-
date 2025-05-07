@@ -19,7 +19,7 @@ class SubscriptionPaymentService
     Rails.logger.info "Using price_id: #{price_id} for plan: #{plan}"
 
     # Use the frontend URL for the success redirect
-    success_url = "https://your-frontend-domain.com/subscriptions/success?session_id={CHECKOUT_SESSION_ID}"
+    success_url = "https://movie-explorer-rorakshaykat2003-movie.onrender.com/subscriptions/success?session_id={CHECKOUT_SESSION_ID}"
     default_url_options = { host: Rails.env.production? ? 'https://movie-explorer-rorakshaykat2003-movie.onrender.com' : 'http://localhost:3000' }
     url_helpers = Rails.application.routes.url_helpers
     cancel_url = url_helpers.api_v1_subscriptions_cancel_url(default_url_options)
