@@ -112,9 +112,9 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_06_172416) do
     t.string "role"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.string "stripe_customer_id"
     t.boolean "notifications_enabled", default: true
     t.string "device_token"
+    t.index ["device_token"], name: "index_users_on_device_token", unique: true
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
