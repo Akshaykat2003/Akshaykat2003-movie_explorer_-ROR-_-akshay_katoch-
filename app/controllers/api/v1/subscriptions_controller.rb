@@ -6,7 +6,7 @@ class Api::V1::SubscriptionsController < ApplicationController
     @result = SubscriptionPaymentService.process_payment(user: @current_user, plan: subscription_params[:plan])
 
     if @result[:success]
-      render json: { session_id: @result[:session_id], subscription_id: @result[:subscription_id] }, status: :created
+      render json: { session_id: @result[:session_id]}, status: :created
     else
       render json: { error: @result[:error] }, status: :unprocessable_entity
     end
