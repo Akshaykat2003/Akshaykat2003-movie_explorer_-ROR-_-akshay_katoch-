@@ -29,22 +29,27 @@ class Subscription < ApplicationRecord
     if basic?
       update(status: 'active', expiry_date: nil)
     else
-      update(status: 'active', expiry_date: Time.current + plan_duration_in_days.days)
+      new_expiry_date = Time.current + plan_duration_in_days.days
+      update(status: 'active', expiry_date: new_expiry_date)
     end
+    Rails.logger.info "Subscription #{id} activated with status: active, expiry_date: #{expiry_date}"
   end
 
   def deactivate!
     update(status: 'inactive')
+    Rails.logger.info "Subscription #{id} deactivated with status: inactive"
   end
 
   def cancel!
     update(status: 'cancelled')
+    Rails.logger.info "Subscription #{id} cancelled with status: cancelled"
   end
 
   def upgrade_plan(new_plan)
     return false if Subscription.plans[new_plan].nil?
     new_expiry_date = Time.current + Subscription.new(plan: new_plan).plan_duration_in_days.days
     update(plan: new_plan, expiry_date: new_expiry_date)
+    Rails.logger.info "Subscription #{id} upgraded to plan: #{new_plan}, expiry_date: #{new_expiry_date}"
   end
 
   def downgrade_plan(new_plan)
@@ -63,7 +68,9 @@ class Subscription < ApplicationRecord
 
   def check_and_deactivate_if_expired
     return if basic?
-    deactivate! if expired? && status != 'inactive'
+    if expired? && status != 'inactive'
+      deactivate!
+    end
   end
 
   def pending?
@@ -73,6 +80,6 @@ class Subscription < ApplicationRecord
   private
 
   def set_default_status
-    self.status ||= 'inactive'
+    self.status ||= 'pending' # Default to pending for new subscriptions
   end
 end

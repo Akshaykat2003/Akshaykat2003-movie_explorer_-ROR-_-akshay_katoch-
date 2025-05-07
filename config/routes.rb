@@ -24,6 +24,7 @@ Rails.application.routes.draw do
 
       # Subscription routes for user
       post   'subscriptions',          to: 'subscriptions#create'
+      # Success route is called by the frontend after Stripe redirects to the frontend success page
       get    'subscriptions/success',  to: 'subscriptions#success'
       get    'subscriptions/cancel',   to: 'subscriptions#cancel'
       get    'subscriptions/:id/check_status', to: 'subscriptions#check_subscription_status'

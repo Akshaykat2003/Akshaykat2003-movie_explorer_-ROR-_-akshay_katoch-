@@ -13,21 +13,12 @@ components:
   schemas:
     Error:
       type: object
-      oneOf:
-        - properties:
-            errors:
-              type: array
-              items:
-                type: string
-              example: ["Email has already been taken", "Password is too short (minimum is 6 characters)"]
-          required:
-            - errors
-        - properties:
-            error:
-              type: string
-              example: "Invalid email or password"
-          required:
-            - error
+      properties:
+        error:
+          type: string
+          example: "Invalid email or password"
+      required:
+        - error
     User:
       type: object
       properties:
@@ -208,7 +199,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Email has already been taken", "Password is too short (minimum is 6 characters)"]
+                error: "Email has already been taken"
   /api/v1/login:
     post:
       summary: Login user
@@ -346,7 +337,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Authentication required"]
+                error: "Authentication required"
         '422':
           description: Invalid input
           content:
@@ -354,7 +345,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Device token is too long"]
+                error: "Device token is too long"
         '500':
           description: Internal server error
           content:
@@ -362,7 +353,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Internal server error"]
+                error: "Internal server error"
   /api/v1/movies:
     get:
       summary: List movies
@@ -412,7 +403,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Internal server error"]
+                error: "Internal server error"
     post:
       summary: Create a movie
       tags:
@@ -481,7 +472,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Forbidden: You do not have permission to perform this action"]
+                error: "Forbidden: You do not have permission to perform this action"
         '422':
           description: Validation errors
           content:
@@ -489,7 +480,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Title can't be blank", "Genre can't be blank"]
+                error: "Title can't be blank"
         '500':
           description: Internal server error
           content:
@@ -497,7 +488,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Internal server error"]
+                error: "Internal server error"
   /api/v1/movies/{id}:
     get:
       summary: Show a movie
@@ -523,7 +514,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Movie not found"]
+                error: "Movie not found"
         '500':
           description: Internal server error
           content:
@@ -531,7 +522,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Internal server error"]
+                error: "Internal server error"
     patch:
       summary: Update a movie
       tags:
@@ -598,7 +589,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Forbidden: You do not have permission to perform this action"]
+                error: "Forbidden: You do not have permission to perform this action"
         '404':
           description: Movie not found
           content:
@@ -606,7 +597,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Movie not found"]
+                error: "Movie not found"
         '422':
           description: Validation errors
           content:
@@ -614,7 +605,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Title can't be blank", "Genre can't be blank"]
+                error: "Title can't be blank"
         '500':
           description: Internal server error
           content:
@@ -622,7 +613,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Internal server error"]
+                error: "Internal server error"
     delete:
       summary: Delete a movie
       tags:
@@ -653,7 +644,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Forbidden: You do not have permission to perform this action"]
+                error: "Forbidden: You do not have permission to perform this action"
         '404':
           description: Movie not found
           content:
@@ -661,7 +652,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Movie not found"]
+                error: "Movie not found"
         '500':
           description: Internal server error
           content:
@@ -669,7 +660,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Internal server error"]
+                error: "Internal server error"
   /api/v1/subscriptions:
     post:
       summary: Create a subscription
@@ -703,6 +694,9 @@ paths:
                   subscription_id:
                     type: integer
                     example: 1
+                required:
+                  - session_id
+                  - subscription_id
         '422':
           description: Subscription creation failed
           content:
@@ -710,7 +704,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Failed to create Stripe customer"]
+                error: "Failed to create Stripe customer"
         '401':
           description: Unauthorized (missing or invalid token)
           content:
@@ -718,14 +712,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Authorization header missing"]
+                error: "Authorization header missing"
   /api/v1/subscriptions/success:
     get:
       summary: Handle successful subscription payment
+      description: Finalizes a subscription after a successful Stripe payment. This endpoint should be called by the frontend after Stripe redirects the user to the frontend's success page (e.g., `https://your-frontend-domain.com/subscriptions/success?session_id={CHECKOUT_SESSION_ID}`). The frontend then makes a request to this endpoint to confirm the subscription status.
       tags:
         - Subscriptions
-      security:
-        - BearerAuth: []
       parameters:
         - name: session_id
           in: query
@@ -752,16 +745,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Invalid checkout session"]
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Authorization header missing"]
+              examples:
+                invalid_session:
+                  summary: Session not found or invalid
+                  value:
+                    error: "No subscription found in session"
+                user_not_found:
+                  summary: User not found in session metadata
+                  value:
+                    error: "User not found in session metadata"
+                pending_subscription_not_found:
+                  summary: Pending subscription not found
+                  value:
+                    error: "Pending subscription not found"
   /api/v1/subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
@@ -805,7 +801,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Subscription not found"]
+                error: "Subscription not found"
         '422':
           description: Failed to retrieve subscription status
           content:
@@ -813,7 +809,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Failed to retrieve subscription status"]
+                error: "Failed to retrieve subscription status"
         '401':
           description: Unauthorized (missing or invalid token)
           content:
@@ -821,7 +817,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Authorization header missing"]
+                error: "Authorization header missing"
 servers:
   - url: http://localhost:3000
     description: Development server
