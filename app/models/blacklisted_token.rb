@@ -1,4 +1,4 @@
-# app/models/blacklisted_token.rb
+
 class BlacklistedToken < ApplicationRecord
   validates :token, presence: true, uniqueness: true
   validates :expires_at, presence: true
@@ -20,12 +20,12 @@ class BlacklistedToken < ApplicationRecord
       decoded_token = JWT.decode(token, secret_key, true, { algorithm: 'HS256' })[0]
       expires_at = Time.at(decoded_token['exp'])
 
-      # Check if the token is still valid (not expired)
+ 
       if expires_at <= Time.now
         return { success: false, error: 'Token already expired' }
       end
 
-      # Create a new blacklisted token record
+ 
       create!(token: token, expires_at: expires_at)
       { success: true, message: 'Logout successful' }
     rescue JWT::DecodeError

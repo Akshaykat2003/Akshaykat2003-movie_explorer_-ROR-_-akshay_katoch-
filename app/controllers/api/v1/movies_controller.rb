@@ -17,8 +17,6 @@ module Api
           current_page: paginated_movies.current_page
         }, status: :ok
       rescue => e
-        Rails.logger.error "Error in MoviesController#index: #{e.message}"
-        Rails.logger.error e.backtrace.join("\n")
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
@@ -28,8 +26,6 @@ module Api
           methods: [:poster_url, :banner_url]
         ), status: :ok
       rescue => e
-        Rails.logger.error "Error in MoviesController#show: #{e.message}"
-        Rails.logger.error e.backtrace.join("\n")
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
@@ -51,8 +47,6 @@ module Api
           render json: { error: result[:errors] }, status: :unprocessable_entity
         end
       rescue => e
-        Rails.logger.error "Error in MoviesController#create: #{e.message}"
-        Rails.logger.error e.backtrace.join("\n")
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
@@ -67,8 +61,6 @@ module Api
           render json: { error: result[:errors] }, status: :unprocessable_entity
         end
       rescue => e
-        Rails.logger.error "Error in MoviesController#update: #{e.message}"
-        Rails.logger.error e.backtrace.join("\n")
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
