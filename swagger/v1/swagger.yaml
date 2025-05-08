@@ -9,7 +9,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions)
+      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
   schemas:
     Error:
       type: object
@@ -200,6 +200,7 @@ paths:
   /api/v1/login:
     post:
       summary: Login user
+      description: Logs in a user and returns a JWT token for authentication. Use this token in the 'Authorize' button (top-right) as 'Bearer <token>' to authenticate subsequent requests. Ensure there is a space between 'Bearer' and the token. Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
       tags:
         - Users
       parameters: []
@@ -229,6 +230,7 @@ paths:
                   token:
                     type: string
                     example: "eyJhbGciOiJIUzI1NiJ9..."
+                    description: JWT token to be used for authenticated requests
                   user:
                     type: object
                     properties:
@@ -244,7 +246,7 @@ paths:
                       role:
                         type: string
                         example: user
-                        enum: [user, supervisor]
+                        enum: [user, supervisor, admin]
                     required:
                       - id
                       - name
@@ -295,7 +297,7 @@ paths:
   /api/v1/update_preferences:
     post:
       summary: Update user preferences
-      description: Updates the user's notification preferences and/or device token for push notifications. Use this to enable/disable notifications or register a new device token.
+      description: Updates the user's notification preferences and/or device token for push notifications. Use this to enable/disable notifications or register a new device token. Requires a valid JWT token. First, use /api/v1/login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Users
       security:
@@ -354,7 +356,7 @@ paths:
   /api/v1/send_notification:
     post:
       summary: Send FCM push notification
-      description: Sends a push notification to a user's device using Firebase Cloud Messaging (FCM). Requires the user to have a device token registered.
+      description: Sends a push notification to a user's device using Firebase Cloud Messaging (FCM). Requires the user to have a device token registered. Requires a valid JWT token. First, use /api/v1/login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Notifications
       security:
@@ -463,6 +465,7 @@ paths:
                 error: "Internal server error"
     post:
       summary: Create a movie
+      description: Creates a new movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Movies
       security:
@@ -582,6 +585,7 @@ paths:
                 error: "Internal server error"
     patch:
       summary: Update a movie
+      description: Updates an existing movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Movies
       security:
@@ -673,6 +677,7 @@ paths:
                 error: "Internal server error"
     delete:
       summary: Delete a movie
+      description: Deletes a movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Movies
       security:
@@ -719,9 +724,33 @@ paths:
               example:
                 error: "Internal server error"
   /api/v1/subscriptions:
+    get:
+      summary: List subscriptions
+      description: Retrieves a list of the authenticated user's subscriptions. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Subscriptions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subscription'
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authenticated user not found"
     post:
       summary: Create a subscription
-      description: Creates a Stripe Checkout session for the specified plan and redirects the user to the Stripe Checkout page to complete the payment.
+      description: "Creates a Stripe Checkout session."
       tags:
         - Subscriptions
       security:
@@ -739,21 +768,22 @@ paths:
               required:
                 - plan
       responses:
-        '200':
-          description: Redirects to the Stripe Checkout page
-          content:
-            text/html:
-              schema:
-                type: string
-              example: "<!DOCTYPE html><html>...</html>"
-        '422':
-          description: Subscription creation failed
+        '201':
+          description: Subscription creation initiated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Failed to create Stripe customer"
+                type: object
+                properties:
+                  checkout_url:
+                    type: string
+                    example: "https://checkout.stripe.com/pay/cs_test_..."
+                  session_id:
+                    type: string
+                    example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                  subscription_id:
+                    type: integer
+                    example: 1
         '401':
           description: Unauthorized (missing or invalid token)
           content:
@@ -761,7 +791,15 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Authorization header missing"
+                error: "Authenticated user not found"
+        '422':
+          description: Subscription creation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid plan"
   /api/v1/subscriptions/success:
     get:
       summary: Handle successful subscription payment
@@ -838,6 +876,43 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: "Invalid session ID"
+  /api/v1/subscriptions/{id}/check_status:
+    get:
+      summary: Check subscription status
+      description: Retrieves the status of a specific subscription by ID. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Subscription status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authenticated user not found"
+        '404':
+          description: Subscription not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Subscription not found"
 servers:
   - url: http://localhost:3000
     description: Development server
