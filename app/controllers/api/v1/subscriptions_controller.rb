@@ -3,8 +3,12 @@ class Api::V1::SubscriptionsController < ApplicationController
   skip_before_action :verify_authenticity_token, only: [:create, :success, :cancel]
 
   def index
-    subscriptions = @current_user.subscriptions
-    render json: { subscriptions: subscriptions.as_json }, status: :ok
+    subscription = @current_user.subscription
+    if subscription
+      render json: { subscriptions: subscription.as_json }, status: :ok
+    else
+      render json: { subscriptions: nil }, status: :ok
+    end
   end
 
   def create

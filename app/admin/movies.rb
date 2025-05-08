@@ -11,7 +11,6 @@ ActiveAdmin.register Movie do
     end
   end
 
-  
   filter :title
   filter :genre
   filter :release_year
@@ -34,6 +33,9 @@ ActiveAdmin.register Movie do
     end
     column :banner do |movie|
       image_tag movie.banner.url, size: '50x50' if movie.banner.attached?
+    end
+    column "API Access" do
+      link_to "Fetch All Movies", "/api/v1/movies/all", target: "_blank"
     end
     actions
   end

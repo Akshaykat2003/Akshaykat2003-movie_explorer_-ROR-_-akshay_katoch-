@@ -10,147 +10,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
-  schemas:
-    Error:
-      type: object
-      properties:
-        error:
-          type: string
-          example: "Invalid email or password"
-        details:
-          type: string
-          example: "Invalid or inaccessible session ID"
-          nullable: true
-      required:
-        - error
-    User:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        first_name:
-          type: string
-          example: "Akshay"
-        last_name:
-          type: string
-          example: "Katoch"
-        email:
-          type: string
-          example: "akshaykatoch38@gmail.com"
-        mobile_number:
-          type: string
-          example: "9876543210"
-        role:
-          type: string
-          enum: [user, supervisor, admin]
-          example: "user"
-        active_plan:
-          type: string
-          enum: [basic, gold, platinum]
-          example: "basic"
-          nullable: true
-          description: "The user's active subscription plan (e.g., basic, gold, platinum). Will always be present for new users (default: basic)."
-      required:
-        - id
-        - first_name
-        - last_name
-        - email
-        - mobile_number
-        - role
-    Movie:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        title:
-          type: string
-          example: "John Wick"
-        genre:
-          type: string
-          example: "Action"
-        release_year:
-          type: integer
-          example: 2014
-        rating:
-          type: number
-          format: float
-          example: 8.8
-        director:
-          type: string
-          example: "Chad Stahelski"
-        duration:
-          type: integer
-          example: 120
-        description:
-          type: string
-          example: "John Wick's style of shooting baddi"
-        plan:
-          type: string
-          enum: [basic, gold, platinum]
-          example: "basic"
-        poster_url:
-          type: string
-          example: "https://example.com/poster.jpg"
-        banner_url:
-          type: string
-          example: "https://example.com/banner.jpg"
-      required:
-        - id
-        - title
-        - genre
-        - release_year
-        - rating
-        - plan
-        - poster_url
-        - banner_url
-    Subscription:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 1
-        user_id:
-          type: integer
-          example: 1
-        plan:
-          type: string
-          enum: [basic, gold, platinum]
-          example: "platinum"
-        status:
-          type: string
-          enum: [pending, active, inactive, cancelled]
-          example: "active"
-        created_at:
-          type: string
-          format: date-time
-          example: "2025-05-07T08:00:00Z"
-        updated_at:
-          type: string
-          format: date-time
-          example: "2025-05-07T08:00:00Z"
-        expiry_date:
-          type: string
-          format: date-time
-          example: "2025-11-07T08:00:00Z"
-          nullable: true
-        session_id:
-          type: string
-          example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
-          nullable: true
-        session_expires_at:
-          type: string
-          format: date-time
-          example: "2025-05-07T08:30:00Z"
-          nullable: true
-      required:
-        - id
-        - user_id
-        - plan
-        - status
-        - created_at
-        - updated_at
+  
 paths:
   /api/v1/signup:
     post:
@@ -390,66 +250,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: "Internal server error"
-  /api/v1/send_notification:
-    post:
-      summary: Send FCM push notification
-      description: Sends a push notification to a user's device using Firebase Cloud Messaging (FCM). Requires the user to have a device token registered. Requires a valid JWT token. First, use /api/v1/login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'.
-      tags:
-        - Notifications
-      security:
-        - BearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                title:
-                  type: string
-                  example: "New Movie Alert"
-                  description: "The title of the notification"
-                body:
-                  type: string
-                  example: "A new movie has been added to your plan!"
-                  description: "The body content of the notification"
-              required:
-                - title
-                - body
-      responses:
-        '200':
-          description: Notification sent successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Notification sent successfully"
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Authorization header missing"
-        '422':
-          description: Failed to send notification
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Device token not found for user"
-        '500':
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Internal server error"
+
   /api/v1/movies:
     get:
       summary: List movies
@@ -578,6 +379,45 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: "Title can't be blank"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+  /api/v1/movies/all:
+    get:
+      summary: List all movies without pagination or filters
+      description: Retrieves all movies accessible to the user based on their subscription plan, without pagination or filters. No authentication is required, but if a JWT token is provided, it will use the authenticated user's subscription plan to filter movies.
+      tags:
+        - Movies
+      responses:
+        '200':
+          description: Movies retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  movies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Movie'
+              example:
+                movies:
+                  - id: 1
+                    title: "John Wick"
+                    genre: "Action"
+                    release_year: 2014
+                    rating: 8.8
+                    director: "Chad Stahelski"
+                    duration: 120
+                    description: "John Wick's style of shooting baddi"
+                    plan: "basic"
+                    poster_url: "https://example.com/poster.jpg"
+                    banner_url: "https://example.com/banner.jpg"
         '500':
           description: Internal server error
           content:
@@ -762,35 +602,35 @@ paths:
                 error: "Internal server error"
   /api/v1/subscriptions:
     get:
-      summary: List subscriptions
-      description: Retrieves a list of the authenticated user's subscriptions. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
+      summary: Get user's subscription
+      description: Retrieves the authenticated user's subscription. Returns a single subscription object or null if the user has no subscription. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
       tags:
         - Subscriptions
       security:
         - BearerAuth: []
       responses:
         '200':
-          description: Subscriptions retrieved successfully
+          description: Subscription retrieved successfully
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   subscriptions:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Subscription'
+                    $ref: '#/components/schemas/Subscription'
+                    nullable: true
+                    description: "The user's subscription, or null if no subscription exists."
               example:
                 subscriptions:
-                  - id: 1
-                    user_id: 1
-                    plan: "platinum"
-                    status: "active"
-                    created_at: "2025-05-07T08:00:00Z"
-                    updated_at: "2025-05-07T08:00:00Z"
-                    expiry_date: "2025-11-07T08:00:00Z"
-                    session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
-                    session_expires_at: "2025-05-07T08:30:00Z"
+                  id: 1
+                  user_id: 1
+                  plan: "platinum"
+                  status: "active"
+                  created_at: "2025-05-07T08:00:00Z"
+                  updated_at: "2025-05-07T08:00:00Z"
+                  expiry_date: "2025-11-07T08:00:00Z"
+                  session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                  session_expires_at: "2025-05-07T08:30:00Z"
         '401':
           description: Unauthorized (missing or invalid token)
           content:
@@ -800,8 +640,8 @@ paths:
               example:
                 error: "Authenticated user not found"
     post:
-      summary: Create a subscription
-      description: Creates a new subscription. For paid plans (gold, platinum), initiates a Stripe Checkout session and returns a checkout URL. For the basic plan, creates a free subscription immediately. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
+      summary: Create or update a subscription
+      description: Creates or updates the user's subscription. For paid plans (gold, platinum), initiates a Stripe Checkout session and returns a checkout URL. For the basic plan, updates or creates a free subscription immediately. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
       tags:
         - Subscriptions
       security:
@@ -820,7 +660,7 @@ paths:
                 - plan
       responses:
         '201':
-          description: Subscription created successfully
+          description: Subscription created or updated successfully
           content:
             application/json:
               schema:
@@ -866,7 +706,7 @@ paths:
               example:
                 error: "Authenticated user not found"
         '422':
-          description: Subscription creation failed
+          description: Subscription creation or update failed
           content:
             application/json:
               schema:

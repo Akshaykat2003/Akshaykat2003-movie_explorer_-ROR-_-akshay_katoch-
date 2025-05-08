@@ -12,6 +12,7 @@ Rails.application.routes.draw do
       post 'send_notification', to: 'notifications#send_fcm'
 
       get    'movies',       to: 'movies#index'
+      get    'movies/all',   to: 'movies#all'
       get    'movies/:id',   to: 'movies#show'
       post   'movies',       to: 'movies#create'
       patch  'movies/:id',   to: 'movies#update'

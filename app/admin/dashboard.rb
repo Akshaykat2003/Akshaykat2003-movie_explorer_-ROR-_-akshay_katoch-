@@ -30,6 +30,13 @@ ActiveAdmin.register_page "Dashboard" do
 
     columns do
       column do
+        panel "Movie Statistics", style: "background-color: #e6f0fa; padding: 20px; border-radius: 10px;" do
+          para "Total Movies: #{Movie.count}", style: "font-weight: bold;"
+          para link_to("Fetch All Movies (API)", "/api/v1/movies/all", target: "_blank")
+        end
+      end
+
+      column do
         panel "Quick Links", style: "background-color: #e6ffe6; padding: 20px; border-radius: 10px;" do
           ul do
             li link_to "View All Users", admin_users_path
@@ -39,23 +46,6 @@ ActiveAdmin.register_page "Dashboard" do
       end
     end
 
-    # # Subscription Table Overview
-    # panel "User Subscriptions Overview", style: "background-color: #fff0f5; padding: 20px; border-radius: 10px;" do
-    #   table_for Subscription.includes(:user).order(created_at: :desc).limit(10) do
-    #     column("User") { |subscription| link_to(subscription.user.email, admin_user_path(subscription.user)) }
-    #     column("Plan") { |subscription| subscription.plan.capitalize }
-    #     column("Status") { |subscription| status_tag(subscription.status) }
-    #     column("Expiry Date", &:expiry_date)
-    #     column("Actions") do |subscription|
-    #       link_to("View", admin_subscription_path(subscription))
-    #     end
-    #   end
-    #   div do
-    #     link_to "View All Subscriptions", admin_subscriptions_path, style: "display:block; margin-top:10px; font-weight:bold;"
-    #   end
-    # end
-
-  
     panel "Subscription Count by Plan", style: "background-color: #f9f9f9; padding: 20px; border-radius: 10px;" do
       ul do
         Subscription.group(:plan).count.each do |plan, count|

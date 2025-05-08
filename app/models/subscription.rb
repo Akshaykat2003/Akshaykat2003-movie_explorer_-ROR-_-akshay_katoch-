@@ -6,6 +6,7 @@ class Subscription < ApplicationRecord
 
   validates :plan, :status, presence: true
   validates :session_expires_at, presence: true, if: -> { pending? }
+  validates :expiry_date, presence: true, unless: -> { basic? } # Require expiry_date for paid plans
 
   before_validation :set_default_status, on: :create
 
@@ -34,7 +35,12 @@ class Subscription < ApplicationRecord
 
   def upgrade_plan(new_plan)
     return false unless Subscription.plans.key?(new_plan)
-    update!(plan: new_plan)
+    new_expiry_date = case new_plan
+                      when 'gold' then Time.current + 1.day
+                      when 'platinum' then Time.current + 1.month
+                      else nil
+                      end
+    update!(plan: new_plan, expiry_date: new_expiry_date)
     Rails.logger.info "Subscription #{id} upgraded to plan: #{new_plan}, expiry_date: #{expiry_date}"
     true
   end

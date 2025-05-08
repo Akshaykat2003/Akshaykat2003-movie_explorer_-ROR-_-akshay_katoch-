@@ -3,10 +3,14 @@ module Api
     class MoviesController < ApplicationController
       before_action :set_movie, only: [:show, :update, :destroy]
       before_action :authorize_supervisor_or_admin, only: [:create, :update, :destroy]
-      skip_before_action :authenticate_request, only: [:index, :show]
+      skip_before_action :authenticate_request, only: [:index, :show, :all]
 
       def index
+        user_plan = get_user_plan
+
         movies = Movie.search_and_filter(params)
+        movies = movies.where('plan <= ?', user_plan)
+
         paginated_movies = movies.page(params[:page]).per(12)
         render json: {
           movies: paginated_movies.as_json(
@@ -20,7 +24,29 @@ module Api
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
+      def all
+        user_plan = get_user_plan
+
+        movies = Movie.all.where('plan <= ?', user_plan)
+
+        render json: {
+          movies: movies.as_json(
+            only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan],
+            methods: [:poster_url, :banner_url]
+          )
+        }, status: :ok
+      rescue => e
+        render json: { error: "Internal server error" }, status: :internal_server_error
+      end
+
       def show
+        user_plan = get_user_plan
+
+        unless @movie.plan <= user_plan
+          render json: { error: "Upgrade your subscription to access this movie" }, status: :forbidden
+          return
+        end
+
         render json: @movie.as_json(
           only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan],
           methods: [:poster_url, :banner_url]
@@ -89,6 +115,18 @@ module Api
         unless @current_user&.role&.in?(%w[supervisor admin])
           render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden
         end
+      end
+
+      def get_user_plan
+        return Movie.plans[:basic] unless @current_user
+
+        active_subscription = @current_user.subscription
+        if active_subscription
+          active_subscription.check_and_deactivate_if_expired
+          return active_subscription.active? ? Subscription.plans[active_subscription.plan] : Movie.plans[:basic]
+        end
+
+        Movie.plans[:basic]
       end
 
       def send_new_movie_notification(movie)
