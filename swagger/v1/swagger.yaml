@@ -111,9 +111,6 @@ components:
         status:
           type: string
           example: "active"
-        payment_id:
-          type: string
-          example: "sub_1..."
         created_at:
           type: string
           format: date-time
@@ -129,12 +126,12 @@ components:
         session_id:
           type: string
           nullable: true
-          example: null
+          example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
         session_expires_at:
           type: string
           format: date-time
           nullable: true
-          example: null
+          example: "2025-05-07T08:30:00Z"
       required:
         - id
         - user_id
@@ -346,6 +343,66 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: "Device token is too long"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+  /api/v1/send_notification:
+    post:
+      summary: Send FCM push notification
+      description: Sends a push notification to a user's device using Firebase Cloud Messaging (FCM). Requires the user to have a device token registered.
+      tags:
+        - Notifications
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "New Movie Alert"
+                  description: "The title of the notification"
+                body:
+                  type: string
+                  example: "A new movie has been added to your plan!"
+                  description: "The body content of the notification"
+              required:
+                - title
+                - body
+      responses:
+        '200':
+          description: Notification sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Notification sent successfully"
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authorization header missing"
+        '422':
+          description: Failed to send notification
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Device token not found for user"
         '500':
           description: Internal server error
           content:
@@ -664,6 +721,7 @@ paths:
   /api/v1/subscriptions:
     post:
       summary: Create a subscription
+      description: Creates a Stripe Checkout session for the specified plan and redirects the user to the Stripe Checkout page to complete the payment.
       tags:
         - Subscriptions
       security:
@@ -681,22 +739,13 @@ paths:
               required:
                 - plan
       responses:
-        '201':
-          description: Subscription creation initiated successfully
+        '200':
+          description: Redirects to the Stripe Checkout page
           content:
-            application/json:
+            text/html:
               schema:
-                type: object
-                properties:
-                  session_id:
-                    type: string
-                    example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
-                  subscription_id:
-                    type: integer
-                    example: 1
-                required:
-                  - session_id
-                  - subscription_id
+                type: string
+              example: "<!DOCTYPE html><html>...</html>"
         '422':
           description: Subscription creation failed
           content:
@@ -716,7 +765,7 @@ paths:
   /api/v1/subscriptions/success:
     get:
       summary: Handle successful subscription payment
-      description: Finalizes a subscription after a successful Stripe payment. This endpoint should be called by the frontend after Stripe redirects the user to the frontend's success page (e.g., `https://your-frontend-domain.com/subscriptions/success?session_id={CHECKOUT_SESSION_ID}`). The frontend then makes a request to this endpoint to confirm the subscription status.
+      description: Called by Stripe after a successful payment. Updates the subscription status and returns the updated subscription.
       tags:
         - Subscriptions
       parameters:
@@ -728,7 +777,7 @@ paths:
             example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
       responses:
         '200':
-          description: Subscription finalized successfully
+          description: Subscription completed successfully
           content:
             application/json:
               schema:
@@ -740,32 +789,29 @@ paths:
                   subscription:
                     $ref: '#/components/schemas/Subscription'
         '422':
-          description: Invalid session or payment failure
+          description: Failed to complete subscription
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-              examples:
-                invalid_session:
-                  summary: Session not found or invalid
-                  value:
-                    error: "No subscription found in session"
-                user_not_found:
-                  summary: User not found in session metadata
-                  value:
-                    error: "User not found in session metadata"
-                pending_subscription_not_found:
-                  summary: Pending subscription not found
-                  value:
-                    error: "Pending subscription not found"
+              example:
+                error: "Payment not completed"
   /api/v1/subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
+      description: Called by Stripe after a cancelled payment. Updates the subscription status and returns the updated subscription.
       tags:
         - Subscriptions
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
       responses:
         '200':
-          description: Subscription creation cancelled
+          description: Subscription cancelled successfully
           content:
             application/json:
               schema:
@@ -774,26 +820,8 @@ paths:
                   message:
                     type: string
                     example: "Subscription creation cancelled"
-  /api/v1/subscriptions/{id}/check_status:
-    get:
-      summary: Check subscription status
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Subscription status retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Subscription'
+                  subscription:
+                    $ref: '#/components/schemas/Subscription'
         '404':
           description: Subscription not found
           content:
@@ -803,21 +831,13 @@ paths:
               example:
                 error: "Subscription not found"
         '422':
-          description: Failed to retrieve subscription status
+          description: Failed to cancel subscription
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Failed to retrieve subscription status"
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Authorization header missing"
+                error: "Invalid session ID"
 servers:
   - url: http://localhost:3000
     description: Development server

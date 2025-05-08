@@ -5,7 +5,6 @@ class Subscription < ApplicationRecord
   enum status: { pending: 'pending', active: 'active', inactive: 'inactive', cancelled: 'cancelled' }
 
   validates :plan, :status, presence: true
-  validates :payment_id, presence: true, uniqueness: true, unless: -> { basic? || pending? }
   validates :session_expires_at, presence: true, if: -> { pending? }
 
   before_validation :set_default_status, on: :create
@@ -15,34 +14,29 @@ class Subscription < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    %w[id status created_at updated_at user_id plan]
+    %w[id status created_at updated_at user_id plan session_id session_expires_at expiry_date]
   end
 
   def activate!
-    if basic?
-      update(status: 'active', expiry_date: nil)
-    else
-      # Expiry date should be set by Stripe's current_period_end, not a fixed duration
-      update(status: 'active')
-    end
+    update!(status: 'active', expiry_date: basic? ? nil : expiry_date)
     Rails.logger.info "Subscription #{id} activated with status: active, expiry_date: #{expiry_date}"
   end
 
   def deactivate!
-    update(status: 'inactive')
+    update!(status: 'inactive')
     Rails.logger.info "Subscription #{id} deactivated with status: inactive"
   end
 
   def cancel!
-    update(status: 'cancelled')
+    update!(status: 'cancelled', session_id: nil, session_expires_at: nil)
     Rails.logger.info "Subscription #{id} cancelled with status: cancelled"
   end
 
   def upgrade_plan(new_plan)
-    return false if Subscription.plans[new_plan].nil?
-    # Expiry date should be updated via Stripe when the plan changes
-    update(plan: new_plan)
+    return false unless Subscription.plans.key?(new_plan)
+    update!(plan: new_plan)
     Rails.logger.info "Subscription #{id} upgraded to plan: #{new_plan}, expiry_date: #{expiry_date}"
+    true
   end
 
   def downgrade_plan(new_plan)
@@ -73,6 +67,6 @@ class Subscription < ApplicationRecord
   private
 
   def set_default_status
-    self.status ||= 'pending' # Default to pending for new subscriptions
+    self.status ||= 'pending'
   end
 end

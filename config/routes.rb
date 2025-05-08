@@ -1,20 +1,16 @@
 Rails.application.routes.draw do
-  # Swagger docs
   mount Rswag::Ui::Engine => '/api-docs'
   mount Rswag::Api::Engine => '/api-docs'
 
   namespace :api do
     namespace :v1 do
-      # User authentication routes
       post 'signup', to: 'users#signup'
       post 'login', to: 'users#login'
       post 'logout', to: 'users#logout'
       
-      # Notification routes
       post 'update_preferences', to: 'users#update_preferences'
       post 'send_notification', to: 'notifications#send_fcm'
 
-      # Movie routes
       get    'movies',       to: 'movies#index'
       get    'movies/:id',   to: 'movies#show'
       post   'movies',       to: 'movies#create'
@@ -22,16 +18,14 @@ Rails.application.routes.draw do
       put    'movies/:id',   to: 'movies#update'
       delete 'movies/:id',   to: 'movies#destroy'
 
-      # Subscription routes for user
-      post   'subscriptions',          to: 'subscriptions#create'
-      # Success route is called by the frontend after Stripe redirects to the frontend success page
-      get    'subscriptions/success',  to: 'subscriptions#success'
-      get    'subscriptions/cancel',   to: 'subscriptions#cancel'
+      get    'subscriptions',                  to: 'subscriptions#index' 
+      post   'subscriptions',                  to: 'subscriptions#create'
+      get    'subscriptions/success',          to: 'subscriptions#success'
+      get    'subscriptions/cancel',           to: 'subscriptions#cancel'
       get    'subscriptions/:id/check_status', to: 'subscriptions#check_subscription_status'
     end
   end
 
-  # Admin authentication and dashboard
   devise_for :admin_users, ActiveAdmin::Devise.config
   ActiveAdmin.routes(self)
 end
