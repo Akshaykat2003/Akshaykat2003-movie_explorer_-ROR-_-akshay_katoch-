@@ -6,11 +6,8 @@ module Api
       skip_before_action :authenticate_request, only: [:index, :show, :all]
 
       def index
-        user_plan = get_user_plan
-
         movies = Movie.search_and_filter(params)
-        movies = movies.where('plan <= ?', user_plan)
-
+        # Removed plan-based filtering to show all movies regardless of user's plan
         paginated_movies = movies.page(params[:page]).per(12)
         render json: {
           movies: paginated_movies.as_json(
@@ -25,10 +22,8 @@ module Api
       end
 
       def all
-        user_plan = get_user_plan
-
-        movies = Movie.all.where('plan <= ?', user_plan)
-
+        # Removed plan-based filtering to show all movies regardless of user's plan
+        movies = Movie.all
         render json: {
           movies: movies.as_json(
             only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan],
@@ -41,7 +36,7 @@ module Api
 
       def show
         user_plan = get_user_plan
-
+        # Keep the plan-based restriction for viewing movie details
         unless @movie.plan <= user_plan
           render json: { error: "Upgrade your subscription to access this movie" }, status: :forbidden
           return

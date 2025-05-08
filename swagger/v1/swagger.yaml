@@ -10,7 +10,147 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
-  
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        first_name:
+          type: string
+          example: "Akshay"
+        last_name:
+          type: string
+          example: "Katoch"
+        email:
+          type: string
+          example: "akshaykatoch38@gmail.com"
+        mobile_number:
+          type: string
+          example: "9876543210"
+        role:
+          type: string
+          enum: [user, supervisor, admin]
+          example: "user"
+        active_plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: "basic"
+          nullable: true
+          description: "The user's active subscription plan (e.g., basic, gold, platinum). Will always be present for users (default: basic)."
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - mobile_number
+        - role
+    Movie:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "John Wick"
+        genre:
+          type: string
+          example: "Action"
+        release_year:
+          type: integer
+          example: 2014
+        rating:
+          type: number
+          format: float
+          example: 8.8
+        director:
+          type: string
+          example: "Chad Stahelski"
+        duration:
+          type: integer
+          example: 120
+        description:
+          type: string
+          example: "John Wick's style of shooting baddi"
+        plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: "basic"
+        poster_url:
+          type: string
+          example: "https://example.com/poster.jpg"
+        banner_url:
+          type: string
+          example: "https://example.com/banner.jpg"
+      required:
+        - id
+        - title
+        - genre
+        - release_year
+        - rating
+        - plan
+        - poster_url
+        - banner_url
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: "platinum"
+        status:
+          type: string
+          enum: [pending, active, cancelled, expired]
+          example: "active"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-05-07T08:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-05-07T08:00:00Z"
+        expiry_date:
+          type: string
+          format: date-time
+          example: "2025-11-07T08:00:00Z"
+          nullable: true
+        session_id:
+          type: string
+          example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+          nullable: true
+        session_expires_at:
+          type: string
+          format: date-time
+          example: "2025-05-07T08:30:00Z"
+          nullable: true
+      required:
+        - id
+        - user_id
+        - plan
+        - status
+        - created_at
+        - updated_at
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Error message"
+        details:
+          type: string
+          example: "Additional error details"
+          nullable: true
+      required:
+        - error
 paths:
   /api/v1/signup:
     post:
@@ -250,10 +390,10 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: "Internal server error"
-
   /api/v1/movies:
     get:
       summary: List movies
+      description: Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre. No authentication is required, but a JWT token can be provided to identify the user.
       tags:
         - Movies
       parameters:
@@ -390,7 +530,7 @@ paths:
   /api/v1/movies/all:
     get:
       summary: List all movies without pagination or filters
-      description: Retrieves all movies accessible to the user based on their subscription plan, without pagination or filters. No authentication is required, but if a JWT token is provided, it will use the authenticated user's subscription plan to filter movies.
+      description: Retrieves all movies, regardless of the user's subscription plan, without pagination or filters. No authentication is required, but a JWT token can be provided to identify the user.
       tags:
         - Movies
       responses:
@@ -429,6 +569,7 @@ paths:
   /api/v1/movies/{id}:
     get:
       summary: Show a movie
+      description: Retrieves the details of a specific movie. No authentication is required, but a JWT token can be provided to identify the user. Users can only view details of movies that match or are below their subscription plan (e.g., a 'basic' plan user cannot view a 'platinum' movie).
       tags:
         - Movies
       parameters:
@@ -444,6 +585,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Movie'
+        '403':
+          description: Forbidden (user's plan does not allow access to this movie)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Upgrade your subscription to access this movie"
         '404':
           description: Movie not found
           content:
