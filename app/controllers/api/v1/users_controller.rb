@@ -46,19 +46,36 @@ class Api::V1::UsersController < ApplicationController
     update_params = params.permit(:device_token, :notifications_enabled).to_h
     update_params[:notifications_enabled] = update_params[:notifications_enabled] != false if update_params.key?(:notifications_enabled)
 
-    if current_user.update(update_params)
-      Rails.logger.info("User #{current_user.id} updated preferences: device_token=#{current_user.device_token}, notifications_enabled=#{current_user.notifications_enabled}")
-      render json: { message: "Preferences updated successfully" }, status: :ok
-    else
-      Rails.logger.warn("Failed to update preferences for user #{current_user.id}: #{current_user.errors.full_messages.join(', ')}")
-      render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
+    # Skip updating device_token if it's already set to the same value
+    if update_params[:device_token] && current_user.device_token == update_params[:device_token]
+      Rails.logger.info("Device token for user #{current_user.id} is unchanged, skipping update")
+      update_params.delete(:device_token)
     end
-  rescue StandardError => e
-    Rails.logger.error("Error in UsersController#update_preferences: #{e.message}")
-    Rails.logger.error(e.backtrace.join("\n"))
-    render json: { errors: ["Internal server error"] }, status: :internal_server_error
-  end
 
+    # If there's nothing to update, return success
+    if update_params.empty?
+      Rails.logger.info("No preferences to update for user #{current_user.id}")
+      render json: { message: "Preferences unchanged" }, status: :ok
+      return
+    end
+
+    begin
+      if current_user.update(update_params)
+        Rails.logger.info("User #{current_user.id} updated preferences: device_token=#{current_user.device_token}, notifications_enabled=#{current_user.notifications_enabled}")
+        render json: { message: "Preferences updated successfully" }, status: :ok
+      else
+        Rails.logger.warn("Failed to update preferences for user #{current_user.id}: #{current_user.errors.full_messages.join(', ')}")
+        render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
+      end
+    rescue ActiveRecord::RecordNotUnique => e
+      Rails.logger.warn("Device token conflict for user #{current_user.id}: #{e.message}")
+      render json: { errors: ["Device token is already in use by another user"] }, status: :unprocessable_entity
+    rescue StandardError => e
+      Rails.logger.error("Error in UsersController#update_preferences: #{e.message}")
+      Rails.logger.error(e.backtrace.join("\n"))
+      render json: { errors: ["Internal server error"] }, status: :internal_server_error
+    end
+  end
 
   def logout
     token = request.headers['Authorization']&.split(' ')&.last
@@ -74,7 +91,6 @@ class Api::V1::UsersController < ApplicationController
   end
 
   private
-
 
   def user_params
     params.permit(:first_name, :last_name, :email, :password, :mobile_number)

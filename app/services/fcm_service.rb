@@ -22,7 +22,8 @@ class FcmService
   end
 
   def send_notification(device_tokens, title, body, data = {})
-    tokens = Array(device_tokens).map(&:to_s).reject do |token|
+    # Deduplicate device tokens to avoid sending the same notification multiple times to the same device
+    tokens = Array(device_tokens).map(&:to_s).uniq.reject do |token|
       if token.strip.empty?
         Rails.logger.warn("Rejected empty FCM token")
         true

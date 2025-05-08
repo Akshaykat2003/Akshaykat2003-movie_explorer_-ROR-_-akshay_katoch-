@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_05_07_151116) do
+ActiveRecord::Schema[7.1].define(version: 2025_05_08_063803) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -114,6 +114,7 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_07_151116) do
     t.boolean "notifications_enabled", default: true
     t.string "device_token"
     t.string "stripe_customer_id"
+    t.index ["device_token"], name: "index_users_on_device_token"
   end
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
