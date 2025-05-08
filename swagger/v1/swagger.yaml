@@ -9,7 +9,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
+      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies.
   schemas:
     User:
       type: object
@@ -569,7 +569,7 @@ paths:
   /api/v1/movies/{id}:
     get:
       summary: Show a movie
-      description: Retrieves the details of a specific movie. No authentication is required, but a JWT token can be provided to identify the user. Users can only view details of movies that match or are below their subscription plan (e.g., a 'basic' plan user cannot view a 'platinum' movie).
+      description: Retrieves the details of a specific movie. No authentication is required, and any user can view the details of any movie, regardless of their subscription plan.
       tags:
         - Movies
       parameters:
@@ -585,14 +585,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Movie'
-        '403':
-          description: Forbidden (user's plan does not allow access to this movie)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Upgrade your subscription to access this movie"
         '404':
           description: Movie not found
           content:

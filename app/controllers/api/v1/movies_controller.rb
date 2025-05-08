@@ -35,18 +35,13 @@ module Api
       end
 
       def show
-        user_plan = get_user_plan
-        # Keep the plan-based restriction for viewing movie details
-        unless @movie.plan <= user_plan
-          render json: { error: "Upgrade your subscription to access this movie" }, status: :forbidden
-          return
-        end
-
         render json: @movie.as_json(
           only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan],
           methods: [:poster_url, :banner_url]
         ), status: :ok
       rescue => e
+        Rails.logger.error "Error in MoviesController#show: #{e.message}"
+        Rails.logger.error e.backtrace.join("\n")
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
