@@ -41,6 +41,12 @@ components:
           type: string
           enum: [user, supervisor, admin]
           example: "user"
+        active_plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: "basic"
+          nullable: true
+          description: "The user's active subscription plan (e.g., basic, gold, platinum). Will always be present for new users (default: basic)."
       required:
         - id
         - first_name
@@ -189,6 +195,17 @@ paths:
                     example: "eyJhbGciOiJIUzI1NiJ9..."
                   user:
                     $ref: '#/components/schemas/User'
+              example:
+                message: "Signup successful"
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                user:
+                  id: 1
+                  first_name: "Akshay"
+                  last_name: "Katoch"
+                  email: "akshaykatoch38@gmail.com"
+                  mobile_number: "9876543210"
+                  role: "user"
+                  active_plan: "basic"
         '422':
           description: Invalid input
           content:
@@ -247,11 +264,25 @@ paths:
                         type: string
                         example: user
                         enum: [user, supervisor, admin]
+                      active_plan:
+                        type: string
+                        enum: [basic, gold, platinum]
+                        example: "basic"
+                        nullable: true
+                        description: "The user's active subscription plan (e.g., basic, gold, platinum). Will always be present for users (default: basic)."
                     required:
                       - id
                       - name
                       - email
                       - role
+              example:
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                user:
+                  id: 1
+                  name: "Akshay Katoch"
+                  email: "akshaykatoch38@gmail.com"
+                  role: "user"
+                  active_plan: "basic"
         '401':
           description: Invalid credentials
           content:
