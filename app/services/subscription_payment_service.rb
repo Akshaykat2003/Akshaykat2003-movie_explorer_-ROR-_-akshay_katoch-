@@ -33,7 +33,7 @@ class SubscriptionPaymentService
     Rails.logger.info "Using price_id: #{price_id} for plan: #{plan}"
 
     # Use raw URL string to avoid encoding the placeholder
-    base_url = Rails.env.development? ? "http://localhost:3000" : "https://movieexplorerplus.netlify.app"
+    base_url = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
     success_url = "#{base_url}/api/v1/subscriptions/success?session_id={CHECKOUT_SESSION_ID}"
     cancel_url  = "#{base_url}/api/v1/subscriptions/cancel?session_id={CHECKOUT_SESSION_ID}"
 
@@ -103,11 +103,10 @@ class SubscriptionPaymentService
       return { success: false, error: 'No current_period_end found in subscription items' }
     end
 
+    Rails.logger.info "Before update: #{sub.attributes.inspect}"
     sub.assign_attributes(
       status: stripe_subscription.status == 'active' ? 'active' : 'inactive',
-      expiry_date: Time.at(current_period_end),
-      session_id: session.id,
-      session_expires_at: Time.at(session.expires_at)
+      expiry_date: Time.at(current_period_end)
     )
 
     if sub.save
@@ -115,7 +114,7 @@ class SubscriptionPaymentService
       { success: true, subscription: sub }
     else
       Rails.logger.error "Failed to save subscription: #{sub.errors.full_messages.join(', ')}"
-      { success: false, error: sub.errors.full_messages.join(', ') }
+      return { success: false, error: sub.errors.full_messages.join(', ') }
     end
   rescue Stripe::StripeError => e
     Rails.logger.error "Stripe error: #{e.message}"

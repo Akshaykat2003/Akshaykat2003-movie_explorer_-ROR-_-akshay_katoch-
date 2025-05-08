@@ -7,6 +7,7 @@ class BlacklistedToken < ApplicationRecord
     exists?(token: token)
   end
 
+
   def self.cleanup_expired
     where('expires_at <= ?', Time.now).delete_all
   end
