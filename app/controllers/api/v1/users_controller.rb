@@ -7,11 +7,32 @@ class Api::V1::UsersController < ApplicationController
     result = User.register(user_params.merge(role: 'user'))
     if result[:success]
       user = result[:user]
+      
+      # Create a default "basic" subscription for the new user
+      begin
+        subscription = Subscription.create!(
+          user: user,
+          plan: 'basic',
+          status: 'active',
+          created_at: Time.current,
+          updated_at: Time.current
+        )
+        Rails.logger.info("Created default basic subscription for user #{user.id}: Subscription ID #{subscription.id}")
+      rescue StandardError => e
+        Rails.logger.error("Failed to create default basic subscription for user #{user.id}: #{e.message}")
+        Rails.logger.error(e.backtrace.join("\n"))
+        # Rollback user creation if subscription fails to maintain consistency
+        user.destroy
+        render json: { errors: ["Failed to assign default plan: #{e.message}"] }, status: :unprocessable_entity
+        return
+      end
+
       token = user.generate_jwt
+      active_plan = get_active_plan(user)
       render json: {
         message: "Signup successful",
         token: token,
-        user: user.as_json(except: [:password_digest]).merge(role: user.role)
+        user: user.as_json(except: [:password_digest]).merge(role: user.role, active_plan: active_plan)
       }, status: :created
     else
       render json: { errors: result[:errors] }, status: :unprocessable_entity
@@ -22,13 +43,15 @@ class Api::V1::UsersController < ApplicationController
     user = User.authenticate(params[:email], params[:password])
     if user
       token = user.generate_jwt
+      active_plan = get_active_plan(user)
       render json: {
         token: token,
         user: {
           id: user.id,
           name: "#{user.first_name} #{user.last_name}",
           email: user.email,
-          role: user.role
+          role: user.role,
+          active_plan: active_plan
         }
       }, status: :ok
     else
@@ -94,5 +117,11 @@ class Api::V1::UsersController < ApplicationController
 
   def user_params
     params.permit(:first_name, :last_name, :email, :password, :mobile_number)
+  end
+
+  def get_active_plan(user)
+    subscription = user.subscription
+    return nil unless subscription&.active?
+    subscription.plan
   end
 end
