@@ -2,30 +2,40 @@ class SubscriptionPaymentService
   def self.process_payment(user:, plan:)
     return { success: false, error: 'Invalid plan' } unless Subscription.plans.key?(plan)
 
+    # Handle the "basic" plan separately
+    if plan == 'basic'
+      Rails.logger.info "Creating free basic subscription for user ID: #{user.id}"
+
+      subscription = Subscription.create!(
+        user: user,
+        plan: plan,
+        status: 'active',
+        created_at: Time.current,
+        updated_at: Time.current
+      )
+
+      Rails.logger.info "Created free basic subscription: ID #{subscription.id} for user ID: #{user.id}"
+      return { success: true, subscription: subscription }
+    end
+
+    # Handle paid plan
     customer = find_or_create_customer(user)
     return { success: false, error: 'Failed to create Stripe customer' } unless customer
 
     price_id = case plan
-               when 'basic' then Rails.application.credentials.stripe[:price_basic_monthly]
                when 'gold' then Rails.application.credentials.stripe[:price_gold_monthly]
                when 'platinum' then Rails.application.credentials.stripe[:price_platinum_monthly]
                else
-                 Rails.logger.error "Unknown plan: #{plan}"
+                 Rails.logger.error "Unknown paid plan: #{plan}"
                  return { success: false, error: "Unknown plan: #{plan}" }
                end
 
     Rails.logger.info "Using price_id: #{price_id} for plan: #{plan}"
 
-    # Dynamically set default_url_options based on the environment
-    default_url_options = if Rails.env.development?
-                            { host: 'localhost', protocol: 'http', port: 3000 }
-                          else
-                            { host: 'movie-explorer-rorakshaykat2003-movie.onrender.com', protocol: 'https', port: nil }
-                          end
-    url_helpers = Rails.application.routes.url_helpers
-
-    success_url = url_helpers.api_v1_subscriptions_success_url(session_id: '{CHECKOUT_SESSION_ID}', **default_url_options)
-    cancel_url = url_helpers.api_v1_subscriptions_cancel_url(session_id: '{CHECKOUT_SESSION_ID}', **default_url_options)
+    # Use raw URL string to avoid encoding the placeholder
+    base_url = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+    success_url = "#{base_url}/api/v1/subscriptions/success?session_id={CHECKOUT_SESSION_ID}"
+    cancel_url  = "#{base_url}/api/v1/subscriptions/cancel?session_id={CHECKOUT_SESSION_ID}"
 
     Rails.logger.info "Creating Stripe Checkout session with success_url: #{success_url}, cancel_url: #{cancel_url}"
 
@@ -43,26 +53,23 @@ class SubscriptionPaymentService
       )
 
       Rails.logger.info "Created Stripe Checkout session: #{session.id}, url: #{session.url}, expires_at: #{session.expires_at}"
+
+      subscription = Subscription.create!(
+        user: user,
+        plan: plan,
+        status: 'pending',
+        session_id: session.id,
+        session_expires_at: Time.at(session.expires_at)
+      )
+
+      { success: true, session: session, subscription: subscription }
     rescue Stripe::StripeError => e
       Rails.logger.error "Stripe session creation failed: #{e.message}"
-      return { success: false, error: "Stripe session creation failed: #{e.message}" }
+      { success: false, error: "Stripe session creation failed: #{e.message}" }
+    rescue StandardError => e
+      Rails.logger.error "Unexpected error: #{e.message}"
+      { success: false, error: 'An unexpected error occurred' }
     end
-
-    subscription = Subscription.create!(
-      user: user,
-      plan: plan,
-      status: 'pending',
-      session_id: session.id,
-      session_expires_at: Time.at(session.expires_at)
-    )
-
-    { success: true, session: session, subscription: subscription }
-  rescue Stripe::StripeError => e
-    Rails.logger.error "Stripe error: #{e.message}"
-    { success: false, error: e.message }
-  rescue StandardError => e
-    Rails.logger.error "Unexpected error: #{e.message}"
-    { success: false, error: 'An unexpected error occurred' }
   end
 
   def self.complete_payment(user:, session_id:)
@@ -90,9 +97,6 @@ class SubscriptionPaymentService
       return { success: false, error: 'Pending subscription not found' }
     end
 
-    Rails.logger.info "Found subscription ID: #{sub.id}, plan: #{sub.plan}, status: #{sub.status}"
-
-    # Access current_period_end from the first item in the subscription
     current_period_end = stripe_subscription.items.data.first.current_period_end
     unless current_period_end
       Rails.logger.error "No current_period_end found in subscription items for session_id: #{session_id}"
@@ -122,26 +126,18 @@ class SubscriptionPaymentService
   end
 
   def self.find_or_create_customer(user)
-    customer = nil
-
     if user.stripe_customer_id
       begin
-        customer = Stripe::Customer.retrieve(user.stripe_customer_id)
+        return Stripe::Customer.retrieve(user.stripe_customer_id)
       rescue Stripe::InvalidRequestError => e
         Rails.logger.error "Invalid Stripe customer ID for user #{user.id}: #{e.message}"
-        customer = nil
         user.update(stripe_customer_id: nil)
       end
     end
 
-    unless customer
-      customer = Stripe::Customer.create(
-        email: user.email
-      )
-      user.update(stripe_customer_id: customer.id)
-      Rails.logger.info "Created new Stripe customer for user #{user.id}: #{customer.id}"
-    end
-
+    customer = Stripe::Customer.create(email: user.email)
+    user.update(stripe_customer_id: customer.id)
+    Rails.logger.info "Created new Stripe customer for user #{user.id}: #{customer.id}"
     customer
   rescue Stripe::InvalidRequestError => e
     Rails.logger.error "Failed to create Stripe customer for user #{user.id}: #{e.message}"

@@ -17,6 +17,10 @@ components:
         error:
           type: string
           example: "Invalid email or password"
+        details:
+          type: string
+          example: "Invalid or inaccessible session ID"
+          nullable: true
       required:
         - error
     User:
@@ -116,6 +120,7 @@ components:
           example: "platinum"
         status:
           type: string
+          enum: [pending, active, inactive, cancelled]
           example: "active"
         created_at:
           type: string
@@ -129,15 +134,16 @@ components:
           type: string
           format: date-time
           example: "2025-11-07T08:00:00Z"
+          nullable: true
         session_id:
           type: string
-          nullable: true
           example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+          nullable: true
         session_expires_at:
           type: string
           format: date-time
-          nullable: true
           example: "2025-05-07T08:30:00Z"
+          nullable: true
       required:
         - id
         - user_id
@@ -768,9 +774,23 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Subscription'
+                type: object
+                properties:
+                  subscriptions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Subscription'
+              example:
+                subscriptions:
+                  - id: 1
+                    user_id: 1
+                    plan: "platinum"
+                    status: "active"
+                    created_at: "2025-05-07T08:00:00Z"
+                    updated_at: "2025-05-07T08:00:00Z"
+                    expiry_date: "2025-11-07T08:00:00Z"
+                    session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                    session_expires_at: "2025-05-07T08:30:00Z"
         '401':
           description: Unauthorized (missing or invalid token)
           content:
@@ -781,7 +801,7 @@ paths:
                 error: "Authenticated user not found"
     post:
       summary: Create a subscription
-      description: "Creates a Stripe Checkout session."
+      description: Creates a new subscription. For paid plans (gold, platinum), initiates a Stripe Checkout session and returns a checkout URL. For the basic plan, creates a free subscription immediately. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
       tags:
         - Subscriptions
       security:
@@ -800,21 +820,43 @@ paths:
                 - plan
       responses:
         '201':
-          description: Subscription creation initiated successfully
+          description: Subscription created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  checkout_url:
-                    type: string
-                    example: "https://checkout.stripe.com/pay/cs_test_..."
-                  session_id:
-                    type: string
-                    example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
-                  subscription_id:
-                    type: integer
-                    example: 1
+                oneOf:
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Free basic subscription created"
+                      subscription_id:
+                        type: integer
+                        example: 1
+                    required:
+                      - message
+                      - subscription_id
+                    description: Response for free basic subscription
+                  - type: object
+                    properties:
+                      checkout_url:
+                        type: string
+                        example: "https://checkout.stripe.com/c/pay/cs_test_..."
+                      session_id:
+                        type: string
+                        example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                      subscription_id:
+                        type: integer
+                        example: 1
+                    required:
+                      - checkout_url
+                      - session_id
+                      - subscription_id
+                    description: Response for paid plans (gold, platinum)
+              example:
+                checkout_url: "https://checkout.stripe.com/c/pay/cs_test_..."
+                session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                subscription_id: 1
         '401':
           description: Unauthorized (missing or invalid token)
           content:
@@ -830,11 +872,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Invalid plan"
+                error: "Invalid plan: diamond"
   /api/v1/subscriptions/success:
     get:
       summary: Handle successful subscription payment
-      description: Called by Stripe after a successful payment. Updates the subscription status and returns the updated subscription.
+      description: Called by Stripe after a successful payment to complete the subscription. Updates the subscription status to active and sets the expiry date based on the Stripe subscription. No authentication is required as this is a Stripe redirect endpoint.
       tags:
         - Subscriptions
       parameters:
@@ -854,9 +896,59 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: "Subscription created successfully"
-                  subscription:
-                    $ref: '#/components/schemas/Subscription'
+                    example: "Subscription completed successfully"
+                  subscription_id:
+                    type: integer
+                    example: 1
+                  plan:
+                    type: string
+                    enum: [basic, gold, platinum]
+                    example: "platinum"
+                  redirect_url:
+                    type: string
+                    example: "http://localhost:3000?subscription_success=true&plan=platinum"
+                required:
+                  - message
+                  - subscription_id
+                  - plan
+                  - redirect_url
+              example:
+                message: "Subscription completed successfully"
+                subscription_id: 1
+                plan: "platinum"
+                redirect_url: "http://localhost:3000?subscription_success=true&plan=platinum"
+        '400':
+          description: Invalid session ID (likely accessed directly)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid session_id provided: likely accessed directly"
+                  message:
+                    type: string
+                    example: "This endpoint should be accessed via Stripe redirect after payment."
+                  instructions:
+                    type: string
+                    example: "Call POST /api/v1/subscriptions to get a checkout_url, then redirect to that URL to complete payment."
+                  redirect_url:
+                    type: string
+                    example: "http://localhost:3000"
+                required:
+                  - error
+                  - message
+                  - instructions
+                  - redirect_url
+        '404':
+          description: Subscription or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Subscription not found or already processed"
         '422':
           description: Failed to complete subscription
           content:
@@ -864,11 +956,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Payment not completed"
+                error: "Invalid or inaccessible session ID"
+                details: "No such checkout.session: cs_test_invalid"
   /api/v1/subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
-      description: Called by Stripe after a cancelled payment. Updates the subscription status and returns the updated subscription.
+      description: Called by Stripe after a cancelled payment to mark the subscription as cancelled. No authentication is required as this is a Stripe redirect endpoint.
       tags:
         - Subscriptions
       parameters:
@@ -888,9 +981,36 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: "Subscription creation cancelled"
-                  subscription:
-                    $ref: '#/components/schemas/Subscription'
+                    example: "Subscription cancelled successfully"
+                  redirect_url:
+                    type: string
+                    example: "http://localhost:3000?subscription_cancelled=true"
+                required:
+                  - message
+                  - redirect_url
+              example:
+                message: "Subscription cancelled successfully"
+                redirect_url: "http://localhost:3000?subscription_cancelled=true"
+        '400':
+          description: Invalid session ID (likely accessed directly)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid session_id provided: likely accessed directly"
+                  message:
+                    type: string
+                    example: "This endpoint should be accessed via Stripe redirect after cancellation."
+                  redirect_url:
+                    type: string
+                    example: "http://localhost:3000"
+                required:
+                  - error
+                  - message
+                  - redirect_url
         '404':
           description: Subscription not found
           content:
@@ -898,7 +1018,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Subscription not found"
+                error: "Subscription not found or already processed"
         '422':
           description: Failed to cancel subscription
           content:
@@ -907,43 +1027,6 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 error: "Invalid session ID"
-  /api/v1/subscriptions/{id}/check_status:
-    get:
-      summary: Check subscription status
-      description: Retrieves the status of a specific subscription by ID. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Subscription status retrieved successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Subscription'
-        '401':
-          description: Unauthorized (missing or invalid token)
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Authenticated user not found"
-        '404':
-          description: Subscription not found
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Subscription not found"
 servers:
   - url: http://localhost:3000
     description: Development server

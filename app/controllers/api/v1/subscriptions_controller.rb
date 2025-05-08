@@ -31,8 +31,13 @@ class Api::V1::SubscriptionsController < ApplicationController
     @result = SubscriptionPaymentService.process_payment(user: @current_user, plan: mapped_plan)
 
     if @result[:success]
-      logger.info "Subscription created successfully with session_id: #{@result[:session].id}, url: #{@result[:session].url}"
-      render json: { checkout_url: @result[:session].url, session_id: @result[:session].id, subscription_id: @result[:subscription].id }, status: :created
+      if mapped_plan == 'basic'
+        logger.info "Free basic subscription created successfully: ID #{@result[:subscription].id}"
+        render json: { message: "Free basic subscription created", subscription_id: @result[:subscription].id }, status: :created
+      else
+        logger.info "Subscription created successfully with session_id: #{@result[:session].id}, url: #{@result[:session].url}"
+        render json: { checkout_url: @result[:session].url, session_id: @result[:session].id, subscription_id: @result[:subscription].id }, status: :created
+      end
     else
       logger.error "Failed to create subscription: #{@result[:error]}"
       render json: { error: @result[:error] }, status: :unprocessable_entity
@@ -41,37 +46,53 @@ class Api::V1::SubscriptionsController < ApplicationController
 
   def success
     session_id = params[:session_id]
-    logger.info "Processing success callback with session_id: #{session_id}"
+    logger.info "Processing success callback with session_id: #{session_id}, request URL: #{request.url}"
 
     if session_id.blank?
       logger.error "Session ID is required for success callback"
-      render html: "<h1>Error: Session ID is required</h1>".html_safe, status: :unprocessable_entity
+      render json: { error: "Session ID is required" }, status: :unprocessable_entity
       return
     end
 
     if session_id == '{CHECKOUT_SESSION_ID}'
       logger.error "Invalid session_id provided: #{session_id} in success callback - likely accessed directly"
-      render html: "<h1>Error: Invalid Session ID</h1><p>It looks like you accessed this URL directly. Please complete the payment process through the Stripe checkout page to be redirected here with a valid session ID.</p>".html_safe, status: :unprocessable_entity
+      redirect_host = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+      render json: {
+        error: "Invalid session_id provided: likely accessed directly",
+        message: "This endpoint should be accessed via Stripe redirect after payment.",
+        instructions: "Call POST /api/v1/subscriptions to get a checkout_url, then redirect to that URL to complete payment.",
+        redirect_url: redirect_host
+      }, status: :bad_request
       return
     end
 
     if invalid_session_id?(session_id)
       logger.error "Invalid session_id provided: #{session_id} in success callback"
-      render html: "<h1>Error: Invalid session ID</h1>".html_safe, status: :unprocessable_entity
+      render json: { error: "Invalid session ID" }, status: :unprocessable_entity
+      return
+    end
+
+    # Retrieve the Stripe session using the session_id from the URL parameters
+    begin
+      stripe_session = Stripe::Checkout::Session.retrieve(session_id)
+      logger.info "Successfully retrieved Stripe session: #{session_id}, payment_status: #{stripe_session.payment_status}"
+    rescue Stripe::InvalidRequestError => e
+      logger.error "Failed to retrieve Stripe session with session_id: #{session_id}. Error: #{e.message}"
+      render json: { error: "Invalid or inaccessible session ID", details: e.message }, status: :unprocessable_entity
       return
     end
 
     subscription = Subscription.find_by(session_id: session_id, status: 'pending')
     unless subscription
       logger.error "Pending subscription not found for session_id: #{session_id}"
-      render html: "<h1>Error: Subscription not found or already processed</h1>".html_safe, status: :not_found
+      render json: { error: "Subscription not found or already processed" }, status: :not_found
       return
     end
 
     user = subscription.user
     unless user
       logger.error "User not found for subscription_id: #{subscription.id}"
-      render html: "<h1>Error: User not found</h1>".html_safe, status: :not_found
+      render json: { error: "User not found" }, status: :not_found
       return
     end
 
@@ -79,45 +100,60 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     if @result[:success]
       logger.info "Subscription completed successfully: #{@result[:subscription].id}"
-      render html: "<h1>Subscription Created Successfully!</h1><p>Your subscription (ID: #{@result[:subscription].id}) for the #{mapped_plan_name(@result[:subscription].plan)} plan is now active.</p>".html_safe, status: :ok
+      redirect_host = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+      render json: {
+        message: "Subscription completed successfully",
+        subscription_id: @result[:subscription].id,
+        plan: @result[:subscription].plan,
+        redirect_url: "#{redirect_host}?subscription_success=true&plan=#{@result[:subscription].plan}"
+      }, status: :ok
     else
       logger.error "Failed to complete subscription: #{@result[:error]}"
-      render html: "<h1>Error: #{@result[:error]}</h1>".html_safe, status: :unprocessable_entity
+      render json: { error: "Failed to complete subscription", details: @result[:error] }, status: :unprocessable_entity
     end
   end
 
   def cancel
     session_id = params[:session_id]
-    logger.info "Processing cancel callback with session_id: #{session_id}"
+    logger.info "Processing cancel callback with session_id: #{session_id}, request URL: #{request.url}"
 
     if session_id.blank?
       logger.error "Session ID is required for cancel callback"
-      render html: "<h1>Error: Session ID is required</h1>".html_safe, status: :unprocessable_entity
+      render json: { error: "Session ID is required" }, status: :unprocessable_entity
       return
     end
 
     if session_id == '{CHECKOUT_SESSION_ID}'
       logger.error "Invalid session_id provided: #{session_id} in cancel callback - likely accessed directly"
-      render html: "<h1>Error: Invalid Session ID</h1><p>It looks like you accessed this URL directly. Please cancel the payment through the Stripe checkout page to be redirected here with a valid session ID.</p>".html_safe, status: :unprocessable_entity
+      redirect_host = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+      render json: {
+        error: "Invalid session_id provided: likely accessed directly",
+        message: "This endpoint should be accessed via Stripe redirect after cancellation.",
+        redirect_url: redirect_host
+      }, status: :bad_request
       return
     end
 
     if invalid_session_id?(session_id)
       logger.error "Invalid session_id provided: #{session_id} in cancel callback"
-      render html: "<h1>Error: Invalid session ID</h1>".html_safe, status: :unprocessable_entity
+      render json: { error: "Invalid session ID" }, status: :unprocessable_entity
       return
     end
 
     subscription = Subscription.find_by(session_id: session_id, status: 'pending')
     unless subscription
       logger.error "Pending subscription not found for session_id: #{session_id}"
-      render html: "<h1>Error: Subscription not found or already processed</h1>".html_safe, status: :not_found
+      render json: { error: "Subscription not found or already processed" }, status: :not_found
       return
     end
 
     subscription.cancel!
     logger.info "Subscription cancelled successfully for session_id: #{session_id}"
-    render html: "<h1>Subscription Cancelled</h1><p>Your subscription (ID: #{subscription.id}) has been cancelled.</p>".html_safe, status: :ok
+    redirect_host = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+    render json: {
+      message: "Subscription cancelled successfully",
+      redirect_url: "#{redirect_host}?subscription_cancelled=true"
+    }, status: :ok
   end
 
   private
