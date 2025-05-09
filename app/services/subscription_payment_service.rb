@@ -56,7 +56,7 @@ class SubscriptionPaymentService
 
    
     base_url = Rails.env.development? ? "http://localhost:3000" : "https://movieexplorerplus.netlify.app"
-    success_url = "#{base_url}/api/v1/subscriptions/success?session_id={CHECKOUT_SESSION_ID}"
+    success_url = "#{base_url}/subscriptions/success?session_id={CHECKOUT_SESSION_ID}"
     cancel_url  = "#{base_url}/api/v1/subscriptions/cancel?session_id={CHECKOUT_SESSION_ID}"
 
     Rails.logger.info "Creating Stripe Checkout session with success_url: #{success_url}, cancel_url: #{cancel_url}"
