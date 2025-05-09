@@ -9,7 +9,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies.
+      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
   schemas:
     User:
       type: object
@@ -857,7 +857,7 @@ paths:
   /api/v1/subscriptions/success:
     get:
       summary: Handle successful subscription payment
-      description: Called by Stripe after a successful payment to complete the subscription. Updates the subscription status to active and sets the expiry date based on the Stripe subscription. No authentication is required as this is a Stripe redirect endpoint.
+      description: Called by the frontend after a successful payment to complete the subscription. Updates the subscription status to active and sets the expiry date based on the Stripe subscription. No authentication is required as this is a Stripe redirect endpoint, but a JWT token can be provided if the user is logged in.
       tags:
         - Subscriptions
       parameters:
@@ -887,7 +887,7 @@ paths:
                     example: "platinum"
                   redirect_url:
                     type: string
-                    example: "http://localhost:3000?subscription_success=true&plan=platinum"
+                    example: "https://movieexplorerplus.netlify.app/subscription-success?session_id=cs_test_...&plan=platinum"
                 required:
                   - message
                   - subscription_id
@@ -897,7 +897,7 @@ paths:
                 message: "Subscription completed successfully"
                 subscription_id: 1
                 plan: "platinum"
-                redirect_url: "http://localhost:3000?subscription_success=true&plan=platinum"
+                redirect_url: "https://movieexplorerplus.netlify.app/subscription-success?session_id=cs_test_...&plan=platinum"
         '400':
           description: Invalid session ID (likely accessed directly)
           content:
@@ -916,7 +916,7 @@ paths:
                     example: "Call POST /api/v1/subscriptions to get a checkout_url, then redirect to that URL to complete payment."
                   redirect_url:
                     type: string
-                    example: "http://localhost:3000"
+                    example: "https://movieexplorerplus.netlify.app"
                 required:
                   - error
                   - message
@@ -942,7 +942,7 @@ paths:
   /api/v1/subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
-      description: Called by Stripe after a cancelled payment to mark the subscription as cancelled. No authentication is required as this is a Stripe redirect endpoint.
+      description: Called by the frontend after a cancelled payment to mark the subscription as cancelled. No authentication is required as this is a Stripe redirect endpoint.
       tags:
         - Subscriptions
       parameters:
@@ -965,13 +965,13 @@ paths:
                     example: "Subscription cancelled successfully"
                   redirect_url:
                     type: string
-                    example: "http://localhost:3000?subscription_cancelled=true"
+                    example: "https://movieexplorerplus.netlify.app/subscription-cancel?session_id=cs_test_..."
                 required:
                   - message
                   - redirect_url
               example:
                 message: "Subscription cancelled successfully"
-                redirect_url: "http://localhost:3000?subscription_cancelled=true"
+                redirect_url: "https://movieexplorerplus.netlify.app/subscription-cancel?session_id=cs_test_..."
         '400':
           description: Invalid session ID (likely accessed directly)
           content:
@@ -987,7 +987,7 @@ paths:
                     example: "This endpoint should be accessed via Stripe redirect after cancellation."
                   redirect_url:
                     type: string
-                    example: "http://localhost:3000"
+                    example: "https://movieexplorerplus.netlify.app"
                 required:
                   - error
                   - message
