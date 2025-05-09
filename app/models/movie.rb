@@ -4,14 +4,10 @@ class Movie < ApplicationRecord
 
   enum plan: { basic: 0, gold: 1, platinum: 2 }
 
-  validates :title, presence: true
-  validates :genre, presence: true
-  validates :release_year, presence: true
-  validates :rating, presence: true
-  validates :plan, presence: true
+  validates :title, :genre, :release_year, :rating, :plan, presence: true
 
   def self.ransackable_attributes(auth_object = nil)
-    super + ["plan"]  
+    super + ["plan"]
   end
 
   def self.ransackable_associations(auth_object = nil)
@@ -19,16 +15,14 @@ class Movie < ApplicationRecord
   end
 
   def self.search_and_filter(params)
-    movies = Movie.all
-
+    movies = all
     movies = movies.where("title ILIKE ?", "%#{params[:search]}%") if params[:search].present?
     movies = movies.where(genre: params[:genre]) if params[:genre].present?
-
     movies
   end
 
   def self.create_movie(params)
-    movie = Movie.new(params.except(:poster, :banner))
+    movie = new(params.except(:poster, :banner))
     if movie.save
       movie.poster.attach(params[:poster]) if params[:poster].present?
       movie.banner.attach(params[:banner]) if params[:banner].present?
@@ -39,32 +33,31 @@ class Movie < ApplicationRecord
   end
 
   def update_movie(params)
-    if update(params)
-      { success: true, movie: self }
-    else
-      { success: false, errors: errors.full_messages }
-    end
+    update(params) ? { success: true, movie: self } : { success: false, errors: errors.full_messages }
   end
 
   def poster_url
-    if poster.attached?
-      begin
-        Cloudinary::Utils.cloudinary_url(poster.key, resource_type: :image)
-      rescue StandardError => e
-        Rails.logger.error "Failed to generate poster_url for movie #{id}: #{e.message}"
-        nil
-      end
-    end
+    Cloudinary::Utils.cloudinary_url(poster.key, resource_type: :image) if poster.attached?
+  rescue StandardError
+    nil
   end
 
   def banner_url
-    if banner.attached?
-      begin
-        Cloudinary::Utils.cloudinary_url(banner.key, resource_type: :image)
-      rescue StandardError => e
-        Rails.logger.error "Failed to generate banner_url for movie #{id}: #{e.message}"
-        nil
-      end
-    end
+    Cloudinary::Utils.cloudinary_url(banner.key, resource_type: :image) if banner.attached?
+  rescue StandardError
+    nil
+  end
+
+  def send_new_movie_notification
+    tokens = User.where(notifications_enabled: true).where.not(device_token: nil).pluck(:device_token)
+    return if tokens.empty?
+
+    FcmService.new.send_notification(
+      tokens,
+      "New Movie Added!",
+      "#{title} has been added to Movie Explorer+.",
+      movie_id: id.to_s,
+      url: "/movies/#{id}"
+    )
   end
 end

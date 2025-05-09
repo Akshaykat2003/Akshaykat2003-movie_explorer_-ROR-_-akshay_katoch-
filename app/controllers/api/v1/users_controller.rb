@@ -6,33 +6,14 @@ class Api::V1::UsersController < ApplicationController
     result = User.register(user_params.merge(role: 'user'))
     if result[:success]
       user = result[:user]
-      
-      # Create a default "basic" subscription for the new user
-      begin
-        subscription = Subscription.create!(
-          user: user,
-          plan: 'basic',
-          status: 'active',
-          created_at: Time.current,
-          updated_at: Time.current
-        )
-        Rails.logger.info("Created default basic subscription for user #{user.id}: Subscription ID #{subscription.id}")
-      rescue StandardError => e
-        Rails.logger.error("Failed to create default basic subscription for user #{user.id}: #{e.message}")
-        Rails.logger.error(e.backtrace.join("\n"))
-        # Rollback user creation if subscription fails to maintain consistency
+      subscription = Subscription.create_default_for_user(user)
+      if subscription
+        token = user.generate_jwt
+        render json: { message: "Signup successful", token: token, user: user.as_json_with_plan }, status: :created
+      else
         user.destroy
-        render json: { errors: ["Failed to assign default plan: #{e.message}"] }, status: :unprocessable_entity
-        return
+        render json: { errors: ["Failed to assign default plan"] }, status: :unprocessable_entity
       end
-
-      token = user.generate_jwt
-      active_plan = get_active_plan(user)
-      render json: {
-        message: "Signup successful",
-        token: token,
-        user: user.as_json(except: [:password_digest]).merge(role: user.role, active_plan: active_plan)
-      }, status: :created
     else
       render json: { errors: result[:errors] }, status: :unprocessable_entity
     end
@@ -42,68 +23,35 @@ class Api::V1::UsersController < ApplicationController
     user = User.authenticate(params[:email], params[:password])
     if user
       token = user.generate_jwt
-      active_plan = get_active_plan(user)
-      render json: {
-        token: token,
-        user: {
-          id: user.id,
-          name: "#{user.first_name} #{user.last_name}",
-          email: user.email,
-          role: user.role,
-          active_plan: active_plan
-        }
-      }, status: :ok
+      render json: { token: token, user: user.as_json_with_plan }, status: :ok
     else
       render json: { error: "Invalid email or password" }, status: :unauthorized
     end
   end
 
   def update_preferences
-    unless current_user
-      Rails.logger.warn("Failed to update preferences: No authenticated user found")
-      render json: { errors: ["Authentication required"] }, status: :unauthorized
-      return
-    end
+    render json: { errors: ["Authentication required"] }, status: :unauthorized unless current_user
 
     update_params = params.permit(:device_token, :notifications_enabled).to_h
     update_params[:notifications_enabled] = update_params[:notifications_enabled] != false if update_params.key?(:notifications_enabled)
+    update_params.delete(:device_token) if update_params[:device_token] && current_user.device_token == update_params[:device_token]
 
-    # Skip updating device_token if it's already set to the same value
-    if update_params[:device_token] && current_user.device_token == update_params[:device_token]
-      Rails.logger.info("Device token for user #{current_user.id} is unchanged, skipping update")
-      update_params.delete(:device_token)
-    end
-
-    # If there's nothing to update, return success
     if update_params.empty?
-      Rails.logger.info("No preferences to update for user #{current_user.id}")
       render json: { message: "Preferences unchanged" }, status: :ok
-      return
+    elsif current_user.update(update_params)
+      render json: { message: "Preferences updated successfully" }, status: :ok
+    else
+      render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
     end
-
-    begin
-      if current_user.update(update_params)
-        Rails.logger.info("User #{current_user.id} updated preferences: device_token=#{current_user.device_token}, notifications_enabled=#{current_user.notifications_enabled}")
-        render json: { message: "Preferences updated successfully" }, status: :ok
-      else
-        Rails.logger.warn("Failed to update preferences for user #{current_user.id}: #{current_user.errors.full_messages.join(', ')}")
-        render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
-      end
-    rescue ActiveRecord::RecordNotUnique => e
-      Rails.logger.warn("Device token conflict for user #{current_user.id}: #{e.message}")
-      render json: { errors: ["Device token is already in use by another user"] }, status: :unprocessable_entity
-    rescue StandardError => e
-      Rails.logger.error("Error in UsersController#update_preferences: #{e.message}")
-      Rails.logger.error(e.backtrace.join("\n"))
-      render json: { errors: ["Internal server error"] }, status: :internal_server_error
-    end
+  rescue ActiveRecord::RecordNotUnique
+    render json: { errors: ["Device token is already in use by another user"] }, status: :unprocessable_entity
+  rescue StandardError
+    render json: { errors: ["Internal server error"] }, status: :internal_server_error
   end
 
   def logout
     token = request.headers['Authorization']&.split(' ')&.last
-    secret_key = Rails.application.credentials.secret_key_base
-
-    result = BlacklistedToken.blacklist(token, secret_key)
+    result = BlacklistedToken.blacklist(token, Rails.application.credentials.secret_key_base)
     if result[:success]
       render json: { message: result[:message] }, status: :ok
     else
@@ -116,11 +64,5 @@ class Api::V1::UsersController < ApplicationController
 
   def user_params
     params.permit(:first_name, :last_name, :email, :password, :mobile_number)
-  end
-
-  def get_active_plan(user)
-    subscription = user.subscription
-    return nil unless subscription&.active?
-    subscription.plan
   end
 end
