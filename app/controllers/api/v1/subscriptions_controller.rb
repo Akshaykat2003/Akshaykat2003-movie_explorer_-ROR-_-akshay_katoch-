@@ -60,7 +60,7 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     if session_id == '{CHECKOUT_SESSION_ID}'
       logger.error "Invalid session_id provided: #{session_id} in success callback - likely accessed directly"
-      redirect_host = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+      redirect_host = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"
       render json: {
         error: "Invalid session_id provided: likely accessed directly",
         message: "This endpoint should be accessed via Stripe redirect after payment.",
@@ -103,13 +103,13 @@ class Api::V1::SubscriptionsController < ApplicationController
     @result = SubscriptionPaymentService.complete_payment(user: user, session_id: session_id)
 
     if @result[:success]
-      logger.info "Subscription completed successfully: #{@result[:subscription].id}"
-      redirect_host = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+      logger.info "Subscription completed successfully: #{@result[:subscription].id}, new status: #{@result[:subscription].status}"
+      redirect_host = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"
       render json: {
         message: "Subscription completed successfully",
         subscription_id: @result[:subscription].id,
         plan: @result[:subscription].plan,
-        redirect_url: "#{redirect_host}?subscription_success=true&plan=#{@result[:subscription].plan}"
+        redirect_url: "#{redirect_host}/subscription-success?session_id=#{session_id}&plan=#{@result[:subscription].plan}"
       }, status: :ok
     else
       logger.error "Failed to complete subscription: #{@result[:error]}"
@@ -129,7 +129,7 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     if session_id == '{CHECKOUT_SESSION_ID}'
       logger.error "Invalid session_id provided: #{session_id} in cancel callback - likely accessed directly"
-      redirect_host = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+      redirect_host = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"
       render json: {
         error: "Invalid session_id provided: likely accessed directly",
         message: "This endpoint should be accessed via Stripe redirect after cancellation.",
@@ -153,10 +153,10 @@ class Api::V1::SubscriptionsController < ApplicationController
 
     subscription.cancel!
     logger.info "Subscription cancelled successfully for session_id: #{session_id}"
-    redirect_host = Rails.env.development? ? "http://localhost:3000" : "https://movie-explorer-rorakshaykat2003-movie.onrender.com"
+    redirect_host = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"
     render json: {
       message: "Subscription cancelled successfully",
-      redirect_url: "#{redirect_host}?subscription_cancelled=true"
+      redirect_url: "#{redirect_host}/subscription-cancel?session_id=#{session_id}"
     }, status: :ok
   end
 

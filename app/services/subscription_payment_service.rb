@@ -50,7 +50,7 @@ class SubscriptionPaymentService
 
     # Set expiry date based on plan
     expiry_date = case plan
-                  when 'gold' then Time.current + 1.day
+                  when 'gold' then Time.current + 1.minute
                   when 'platinum' then Time.current + 1.month
                   end
 
