@@ -68,15 +68,14 @@ class SubscriptionPaymentService
 
   def self.find_or_create_customer(user)
     if user.stripe_customer_id
-      return Stripe::Customer.retrieve(user.stripe_customer_id)
-    rescue Stripe::InvalidRequestError
-      user.update(stripe_customer_id: nil)
+      customer = Stripe::Customer.retrieve(user.stripe_customer_id)
+    else
+      customer = Stripe::Customer.create(email: user.email)
+      user.update!(stripe_customer_id: customer.id)
     end
-
-    customer = Stripe::Customer.create(email: user.email)
-    user.update!(stripe_customer_id: customer.id)
     customer
   rescue Stripe::InvalidRequestError
+    user.update!(stripe_customer_id: nil) if user.stripe_customer_id
     nil
   end
 end
