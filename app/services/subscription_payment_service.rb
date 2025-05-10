@@ -5,7 +5,7 @@ class SubscriptionPaymentService
     subscription = user.subscription || Subscription.new(user: user)
 
     if plan == 'basic'
-      subscription.update(plan: plan, status: 'active', expiry_date: nil, session_id: nil, session_expires_at: nil)
+      subscription.update!(plan: plan, status: 'active', expiry_date: nil, session_id: nil, session_expires_at: nil)
       return { success: true, subscription: subscription }
     end
 
@@ -23,7 +23,7 @@ class SubscriptionPaymentService
                   when 'platinum' then Time.current + 1.month
                   end
 
-    base_url = Rails.env.development? ? "http://localhost:3000" : "https://movieexplorerplus.netlify.app"
+    base_url = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"
     success_url = "#{base_url}/subscription-success?session_id={CHECKOUT_SESSION_ID}&plan=#{plan}"
     cancel_url = "#{base_url}/subscription-cancel?session_id={CHECKOUT_SESSION_ID}"
 
@@ -67,12 +67,13 @@ class SubscriptionPaymentService
   end
 
   def self.find_or_create_customer(user)
-    if user.stripe_customer_id
-      customer = Stripe::Customer.retrieve(user.stripe_customer_id)
-    else
-      customer = Stripe::Customer.create(email: user.email)
-      user.update!(stripe_customer_id: customer.id)
-    end
+    customer = if user.stripe_customer_id
+                 Stripe::Customer.retrieve(user.stripe_customer_id)
+               else
+                 Stripe::Customer.create(email: user.email).tap do |c|
+                   user.update!(stripe_customer_id: c.id)
+                 end
+               end
     customer
   rescue Stripe::InvalidRequestError
     user.update!(stripe_customer_id: nil) if user.stripe_customer_id

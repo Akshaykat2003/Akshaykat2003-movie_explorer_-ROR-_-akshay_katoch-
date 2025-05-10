@@ -31,11 +31,9 @@ class Api::V1::UsersController < ApplicationController
 
   def update_preferences
     render json: { errors: ["Authentication required"] }, status: :unauthorized unless current_user
-
     update_params = params.permit(:device_token, :notifications_enabled).to_h
     update_params[:notifications_enabled] = update_params[:notifications_enabled] != false if update_params.key?(:notifications_enabled)
     update_params.delete(:device_token) if update_params[:device_token] && current_user.device_token == update_params[:device_token]
-
     if update_params.empty?
       render json: { message: "Preferences unchanged" }, status: :ok
     elsif current_user.update(update_params)

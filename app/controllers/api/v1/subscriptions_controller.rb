@@ -12,8 +12,7 @@ class Api::V1::SubscriptionsController < ApplicationController
     plan = subscription_params[:plan]&.downcase
     mapped_plan = %w[basic gold platinum].include?(plan) ? plan : (render json: { error: "Invalid plan: #{plan}" }, status: :unprocessable_entity and return)
 
-    subscription = @current_user.subscription || Subscription.create(user: @current_user)
-    result = subscription.process_payment(mapped_plan)
+    result = SubscriptionPaymentService.process_payment(user: @current_user, plan: mapped_plan)
 
     if result[:success]
       if mapped_plan == 'basic'
@@ -32,17 +31,11 @@ class Api::V1::SubscriptionsController < ApplicationController
     render json: invalid_session_response("payment"), status: :bad_request if session_id == '{CHECKOUT_SESSION_ID}'
     render json: { error: "Invalid session ID" }, status: :unprocessable_entity if invalid_session_id?(session_id)
 
-    begin
-      stripe_session = Stripe::Checkout::Session.retrieve(session_id)
-    rescue Stripe::InvalidRequestError => e
-      render json: { error: "Invalid or inaccessible session ID", details: e.message }, status: :unprocessable_entity and return
-    end
-
     subscription = Subscription.find_by(session_id: session_id, status: 'pending')
     render json: { error: "Subscription not found or already processed" }, status: :not_found unless subscription
     render json: { error: "User not found" }, status: :not_found unless subscription.user
 
-    result = subscription.complete_payment(session_id)
+    result = SubscriptionPaymentService.complete_payment(user: subscription.user, session_id: session_id)
     if result[:success]
       redirect_host = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"
       render json: {
