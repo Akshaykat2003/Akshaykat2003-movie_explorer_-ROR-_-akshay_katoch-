@@ -1,14 +1,156 @@
-openapi: 3.0.1
+openapi: 3.0.3
 info:
-  title: Movie Explorer+ API
-  version: v1
+  title: Movie Explorer API
+  version: 1.0.0
+  description: API documentation for the Movie Explorer application
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions)
+      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        first_name:
+          type: string
+          example: "Akshay"
+        last_name:
+          type: string
+          example: "Katoch"
+        email:
+          type: string
+          example: "akshaykatoch38@gmail.com"
+        mobile_number:
+          type: string
+          example: "9876543210"
+        role:
+          type: string
+          enum: [user, supervisor, admin]
+          example: "user"
+        active_plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: "basic"
+          nullable: true
+          description: "The user's active subscription plan (e.g., basic, gold, platinum). Will always be present for users (default: basic)."
+      required:
+        - id
+        - first_name
+        - last_name
+        - email
+        - mobile_number
+        - role
+    Movie:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "John Wick"
+        genre:
+          type: string
+          example: "Action"
+        release_year:
+          type: integer
+          example: 2014
+        rating:
+          type: number
+          format: float
+          example: 8.8
+        director:
+          type: string
+          example: "Chad Stahelski"
+        duration:
+          type: integer
+          example: 120
+        description:
+          type: string
+          example: "John Wick's style of shooting baddi"
+        plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: "basic"
+        poster_url:
+          type: string
+          example: "https://example.com/poster.jpg"
+        banner_url:
+          type: string
+          example: "https://example.com/banner.jpg"
+      required:
+        - id
+        - title
+        - genre
+        - release_year
+        - rating
+        - plan
+        - poster_url
+        - banner_url
+    Subscription:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        plan:
+          type: string
+          enum: [basic, gold, platinum]
+          example: "platinum"
+        status:
+          type: string
+          enum: [pending, active, cancelled, expired]
+          example: "active"
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-05-07T08:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-05-07T08:00:00Z"
+        expiry_date:
+          type: string
+          format: date-time
+          example: "2025-11-07T08:00:00Z"
+          nullable: true
+        session_id:
+          type: string
+          example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+          nullable: true
+        session_expires_at:
+          type: string
+          format: date-time
+          example: "2025-05-07T08:30:00Z"
+          nullable: true
+      required:
+        - id
+        - user_id
+        - plan
+        - status
+        - created_at
+        - updated_at
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Error message"
+        details:
+          type: string
+          example: "Additional error details"
+          nullable: true
+      required:
+        - error
 paths:
   /api/v1/signup:
     post:
@@ -58,42 +200,30 @@ paths:
                     type: string
                     example: "eyJhbGciOiJIUzI1NiJ9..."
                   user:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                        example: 1
-                      first_name:
-                        type: string
-                        example: Akshay
-                      last_name:
-                        type: string
-                        example: Katoch
-                      email:
-                        type: string
-                        example: akshaykatoch38@gmail.com
-                      mobile_number:
-                        type: string
-                        example: "9876543210"
-                      role:
-                        type: string
-                        example: user
-                        enum: [user, supervisor]
+                    $ref: '#/components/schemas/User'
+              example:
+                message: "Signup successful"
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                user:
+                  id: 1
+                  first_name: "Akshay"
+                  last_name: "Katoch"
+                  email: "akshaykatoch38@gmail.com"
+                  mobile_number: "9876543210"
+                  role: "user"
+                  active_plan: "basic"
         '422':
           description: Invalid input
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  errors:
-                    type: array
-                    items:
-                      type: string
-                    example: ["Email has already been taken", "Password is too short (minimum is 6 characters)"]
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Email has already been taken"
   /api/v1/login:
     post:
       summary: Login user
+      description: Logs in a user and returns a JWT token for authentication. Use this token in the 'Authorize' button (top-right) as 'Bearer <token>' to authenticate subsequent requests. Ensure there is a space between 'Bearer' and the token. Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
       tags:
         - Users
       parameters: []
@@ -123,6 +253,7 @@ paths:
                   token:
                     type: string
                     example: "eyJhbGciOiJIUzI1NiJ9..."
+                    description: JWT token to be used for authenticated requests
                   user:
                     type: object
                     properties:
@@ -138,17 +269,34 @@ paths:
                       role:
                         type: string
                         example: user
-                        enum: [user, supervisor]
+                        enum: [user, supervisor, admin]
+                      active_plan:
+                        type: string
+                        enum: [basic, gold, platinum]
+                        example: "basic"
+                        nullable: true
+                        description: "The user's active subscription plan (e.g., basic, gold, platinum). Will always be present for users (default: basic)."
+                    required:
+                      - id
+                      - name
+                      - email
+                      - role
+              example:
+                token: "eyJhbGciOiJIUzI1NiJ9..."
+                user:
+                  id: 1
+                  name: "Akshay Katoch"
+                  email: "akshaykatoch38@gmail.com"
+                  role: "user"
+                  active_plan: "basic"
         '401':
           description: Invalid credentials
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Invalid email or password"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid email or password"
   /api/v1/logout:
     post:
       summary: Logout user
@@ -156,12 +304,6 @@ paths:
         - Users
       security:
         - BearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties: {}
       responses:
         '200':
           description: Logout successful
@@ -178,25 +320,21 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Authorization header missing"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authorization header missing"
         '422':
           description: Invalid token
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Invalid token"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid token"
   /api/v1/update_preferences:
     post:
       summary: Update user preferences
-      description: Updates the user's notification preferences and/or device token for push notifications. Use this to enable/disable notifications or register a new device token.
+      description: Updates the user's notification preferences and/or device token for push notifications. Use this to enable/disable notifications or register a new device token. Requires a valid JWT token. First, use /api/v1/login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Users
       security:
@@ -211,12 +349,12 @@ paths:
                   type: string
                   example: "fcm-device-token-here"
                   nullable: true
-                  description: FCM device token for push notifications (optional)
+                  description: "FCM device token for push notifications (optional)"
                 notifications_enabled:
                   type: boolean
                   example: true
                   nullable: true
-                  description: Whether the user wants to receive notifications (optional, defaults to true if not provided)
+                  description: "Whether the user wants to receive notifications (optional, defaults to true if not provided)"
       responses:
         '200':
           description: Preferences updated successfully
@@ -233,70 +371,29 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Token has been invalidated. Please log in again."
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authentication required"
         '422':
           description: Invalid input
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  errors:
-                    type: array
-                    items:
-                      type: string
-                    example: ["Device token is too long", "Notifications enabled is not included in the list"]
-  /api/v1/notifications/test:
-    post:
-      summary: Send a test push notification (Supervisor/Admin only)
-      tags:
-        - Notifications
-      security:
-        - BearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties: {}
-      responses:
-        '200':
-          description: Test notification sent or no eligible devices
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Device token is too long"
+        '500':
+          description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: "Test notification sent"
-        '403':
-          description: Forbidden (requires supervisor or admin role)
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Forbidden: You do not have permission to perform this action"
-        '422':
-          description: Failed to send notification
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Failed to send notification to some devices"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
   /api/v1/movies:
     get:
       summary: List movies
+      description: Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre. No authentication is required, but a JWT token can be provided to identify the user.
       tags:
         - Movies
       parameters:
@@ -329,48 +426,24 @@ paths:
                   movies:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        title:
-                          type: string
-                        genre:
-                          type: string
-                        release_year:
-                          type: integer
-                        rating:
-                          type: number
-                        director:
-                          type: string
-                        duration:
-                          type: integer
-                        description:
-                          type: string
-                        plan:
-                          type: string
-                          enum: [basic, gold, platinum]
-                        poster_url:
-                          type: string
-                          nullable: true
-                        banner_url:
-                          type: string
-                          nullable: true
+                      $ref: '#/components/schemas/Movie'
                   total_pages:
                     type: integer
+                    example: 1
                   current_page:
                     type: integer
+                    example: 1
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
     post:
       summary: Create a movie
+      description: Creates a new movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Movies
       security:
@@ -383,108 +456,120 @@ paths:
               properties:
                 title:
                   type: string
-                  example: Inception
+                  example: "John wick"
                 genre:
                   type: string
-                  example: Sci-Fi
+                  example: "Action"
                 release_year:
                   type: integer
-                  example: 2010
+                  example: 2014
                 rating:
                   type: number
+                  format: float
                   example: 8.8
                 director:
                   type: string
-                  example: Christopher Nolan
+                  example: "Chad Stahelski"
                 duration:
                   type: integer
-                  example: 148
+                  example: 120
                 description:
                   type: string
-                  example: A thief who steals corporate secrets through dream infiltration.
+                  example: "John Wick's style of shooting baddi"
                 plan:
                   type: string
                   enum: [basic, gold, platinum]
-                  example: platinum
+                  example: "basic"
                 poster:
                   type: string
                   format: binary
-                  description: Poster image file
+                  description: "Poster image file"
                 banner:
                   type: string
                   format: binary
-                  description: Banner image file
+                  description: "Banner image file"
               required:
                 - title
                 - genre
                 - release_year
                 - rating
                 - plan
+                - poster
+                - banner
       responses:
         '201':
           description: Movie created successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  title:
-                    type: string
-                  genre:
-                    type: string
-                  release_year:
-                    type: integer
-                  rating:
-                    type: number
-                  director:
-                    type: string
-                  duration:
-                    type: integer
-                  description:
-                    type: string
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                  poster_url:
-                    type: string
-                    nullable: true
-                  banner_url:
-                    type: string
-                    nullable: true
+                $ref: '#/components/schemas/Movie'
         '403':
           description: Forbidden (requires supervisor or admin role)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden: You do not have permission to perform this action"
         '422':
           description: Validation errors
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: array
-                    items:
-                      type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Title can't be blank"
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+  /api/v1/movies/all:
+    get:
+      summary: List all movies without pagination or filters
+      description: Retrieves all movies, regardless of the user's subscription plan, without pagination or filters. No authentication is required, but a JWT token can be provided to identify the user.
+      tags:
+        - Movies
+      responses:
+        '200':
+          description: Movies retrieved successfully
+          content:
+            application/json:
+              schema:
                 type: object
                 properties:
-                  error:
-                    type: string
+                  movies:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Movie'
+              example:
+                movies:
+                  - id: 1
+                    title: "John Wick"
+                    genre: "Action"
+                    release_year: 2014
+                    rating: 8.8
+                    director: "Chad Stahelski"
+                    duration: 120
+                    description: "John Wick's style of shooting baddi"
+                    plan: "basic"
+                    poster_url: "https://example.com/poster.jpg"
+                    banner_url: "https://example.com/banner.jpg"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
   /api/v1/movies/{id}:
     get:
       summary: Show a movie
+      description: Retrieves the details of a specific movie. No authentication is required, and any user can view the details of any movie, regardless of their subscription plan.
       tags:
         - Movies
       parameters:
@@ -499,53 +584,26 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  title:
-                    type: string
-                  genre:
-                    type: string
-                  release_year:
-                    type: integer
-                  rating:
-                    type: number
-                  director:
-                    type: string
-                  duration:
-                    type: integer
-                  description:
-                    type: string
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                  poster_url:
-                    type: string
-                    nullable: true
-                  banner_url:
-                    type: string
-                    nullable: true
+                $ref: '#/components/schemas/Movie'
         '404':
           description: Movie not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Movie not found"
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-    put:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
+    patch:
       summary: Update a movie
+      description: Updates an existing movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Movies
       security:
@@ -564,110 +622,80 @@ paths:
               properties:
                 title:
                   type: string
-                  example: Inception Updated
+                  example: "John wick Updated"
                 genre:
                   type: string
-                  example: Sci-Fi
+                  example: "Action"
                 release_year:
                   type: integer
-                  example: 2010
+                  example: 2014
                 rating:
                   type: number
+                  format: float
                   example: 8.8
                 director:
                   type: string
-                  example: Christopher Nolan
+                  example: "Chad Stahelski"
                 duration:
                   type: integer
-                  example: 148
+                  example: 120
                 description:
                   type: string
-                  example: A thief who steals corporate secrets through dream infiltration.
+                  example: "John Wick's style of shooting baddi, updated"
                 plan:
                   type: string
                   enum: [basic, gold, platinum]
-                  example: platinum
+                  example: "basic"
                 poster:
                   type: string
                   format: binary
-                  description: Poster image file
+                  description: "Poster image file (optional)"
                 banner:
                   type: string
                   format: binary
-                  description: Banner image file
+                  description: "Banner image file (optional)"
       responses:
         '200':
           description: Movie updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  title:
-                    type: string
-                  genre:
-                    type: string
-                  release_year:
-                    type: integer
-                  rating:
-                    type: number
-                  director:
-                    type: string
-                  duration:
-                    type: integer
-                  description:
-                    type: string
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                  poster_url:
-                    type: string
-                    nullable: true
-                  banner_url:
-                    type: string
-                    nullable: true
+                $ref: '#/components/schemas/Movie'
         '403':
           description: Forbidden (requires supervisor or admin role)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden: You do not have permission to perform this action"
         '404':
           description: Movie not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Movie not found"
         '422':
           description: Validation errors
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: array
-                    items:
-                      type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Title can't be blank"
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
     delete:
       summary: Delete a movie
+      description: Deletes a movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
       tags:
         - Movies
       security:
@@ -688,75 +716,73 @@ paths:
                 properties:
                   message:
                     type: string
+                    example: "Movie deleted successfully"
         '403':
           description: Forbidden (requires supervisor or admin role)
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden: You do not have permission to perform this action"
         '404':
           description: Movie not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Movie not found"
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Internal server error"
   /api/v1/subscriptions:
     get:
-      summary: List subscriptions
+      summary: Get user's subscription
+      description: Retrieves the authenticated user's subscription. Returns a single subscription object or null if the user has no subscription. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
       tags:
         - Subscriptions
       security:
         - BearerAuth: []
       responses:
         '200':
-          description: Subscriptions retrieved successfully
+          description: Subscription retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    id:
-                      type: integer
-                    user_id:
-                      type: integer
-                    plan:
-                      type: string
-                      enum: [basic, gold, platinum]
-                    status:
-                      type: string
-                      enum: [active, inactive, cancelled]
-                    payment_id:
-                      type: string
-                      nullable: true
-                    expiry_date:
-                      type: string
-                      format: date-time
-                      nullable: true
-                    created_at:
-                      type: string
-                      format: date-time
-                    updated_at:
-                      type: string
-                      format: date-time
+                type: object
+                properties:
+                  subscriptions:
+                    $ref: '#/components/schemas/Subscription'
+                    nullable: true
+                    description: "The user's subscription, or null if no subscription exists."
+              example:
+                subscriptions:
+                  id: 1
+                  user_id: 1
+                  plan: "platinum"
+                  status: "active"
+                  created_at: "2025-05-07T08:00:00Z"
+                  updated_at: "2025-05-07T08:00:00Z"
+                  expiry_date: "2025-11-07T08:00:00Z"
+                  session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                  session_expires_at: "2025-05-07T08:30:00Z"
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authenticated user not found"
     post:
-      summary: Create a subscription
+      summary: Create or update a subscription
+      description: Creates or updates the user's subscription. For paid plans (gold, platinum), initiates a Stripe Checkout session and returns a checkout URL. For the basic plan, updates or creates a free subscription immediately. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
       tags:
         - Subscriptions
       security:
@@ -770,210 +796,80 @@ paths:
                 plan:
                   type: string
                   enum: [basic, gold, platinum]
-                  example: gold
-                payment_id:
-                  type: string
-                  example: pay_123456
-                  nullable: true
+                  example: platinum
               required:
                 - plan
       responses:
         '201':
-          description: Subscription created successfully
+          description: Subscription created or updated successfully
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  user_id:
-                    type: integer
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                  status:
-                    type: string
-                    enum: [active, inactive, cancelled]
-                  payment_id:
-                    type: string
-                    nullable: true
-                  expiry_date:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
+                oneOf:
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Free basic subscription created"
+                      subscription_id:
+                        type: integer
+                        example: 1
+                    required:
+                      - message
+                      - subscription_id
+                    description: Response for free basic subscription
+                  - type: object
+                    properties:
+                      checkout_url:
+                        type: string
+                        example: "https://checkout.stripe.com/c/pay/cs_test_..."
+                      session_id:
+                        type: string
+                        example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                      subscription_id:
+                        type: integer
+                        example: 1
+                    required:
+                      - checkout_url
+                      - session_id
+                      - subscription_id
+                    description: Response for paid plans (gold, platinum)
+              example:
+                checkout_url: "https://checkout.stripe.com/c/pay/cs_test_..."
+                session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                subscription_id: 1
+        '401':
+          description: Unauthorized (missing or invalid token)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authenticated user not found"
         '422':
-          description: Subscription creation failed
+          description: Subscription creation or update failed
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Subscription creation/payment failed"
-  /api/v1/subscriptions/{id}:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid plan: diamond"
+  /api/v1/subscriptions/success:
     get:
-      summary: Show a subscription
+      summary: Handle successful subscription payment
+      description: Called by the frontend after a successful payment to complete the subscription. Updates the subscription status to active and sets the expiry date based on the Stripe subscription. No authentication is required as this is a Stripe redirect endpoint, but a JWT token can be provided if the user is logged in.
       tags:
         - Subscriptions
-      security:
-        - BearerAuth: []
       parameters:
-        - name: id
-          in: path
+        - name: session_id
+          in: query
           required: true
           schema:
-            type: integer
+            type: string
+            example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
       responses:
         '200':
-          description: Subscription retrieved successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  user_id:
-                    type: integer
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                  status:
-                    type: string
-                    enum: [active, inactive, cancelled]
-                  payment_id:
-                    type: string
-                    nullable: true
-                  expiry_date:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
-        '404':
-          description: Subscription not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Subscription not found"
-    put:
-      summary: Update a subscription
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                subscription:
-                  type: object
-                  properties:
-                    plan:
-                      type: string
-                      enum: [basic, gold, platinum]
-                      example: platinum
-                    status:
-                      type: string
-                      enum: [active, inactive, cancelled]
-                      example: active
-                    payment_id:
-                      type: string
-                      example: pay_123456
-                      nullable: true
-              required:
-                - subscription
-      responses:
-        '200':
-          description: Subscription updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  id:
-                    type: integer
-                  user_id:
-                    type: integer
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                  status:
-                    type: string
-                    enum: [active, inactive, cancelled]
-                  payment_id:
-                    type: string
-                    nullable: true
-                  expiry_date:
-                    type: string
-                    format: date-time
-                    nullable: true
-                  created_at:
-                    type: string
-                    format: date-time
-                  updated_at:
-                    type: string
-                    format: date-time
-        '404':
-          description: Subscription not found
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Subscription not found"
-        '422':
-          description: Validation errors
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  errors:
-                    type: array
-                    items:
-                      type: string
-    delete:
-      summary: Delete a subscription
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Subscription deleted successfully
+          description: Subscription completed successfully
           content:
             application/json:
               schema:
@@ -981,27 +877,137 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: "Subscription deleted successfully"
+                    example: "Subscription completed successfully"
+                  subscription_id:
+                    type: integer
+                    example: 1
+                  plan:
+                    type: string
+                    enum: [basic, gold, platinum]
+                    example: "platinum"
+                  redirect_url:
+                    type: string
+                    example: "https://movieexplorerplus.netlify.app/subscription-success?session_id=cs_test_...&plan=platinum"
+                required:
+                  - message
+                  - subscription_id
+                  - plan
+                  - redirect_url
+              example:
+                message: "Subscription completed successfully"
+                subscription_id: 1
+                plan: "platinum"
+                redirect_url: "https://movieexplorerplus.netlify.app/subscription-success?session_id=cs_test_...&plan=platinum"
+        '400':
+          description: Invalid session ID (likely accessed directly)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid session_id provided: likely accessed directly"
+                  message:
+                    type: string
+                    example: "This endpoint should be accessed via Stripe redirect after payment."
+                  instructions:
+                    type: string
+                    example: "Call POST /api/v1/subscriptions to get a checkout_url, then redirect to that URL to complete payment."
+                  redirect_url:
+                    type: string
+                    example: "https://movieexplorerplus.netlify.app"
+                required:
+                  - error
+                  - message
+                  - instructions
+                  - redirect_url
+        '404':
+          description: Subscription or user not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Subscription not found or already processed"
+        '422':
+          description: Failed to complete subscription
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid or inaccessible session ID"
+                details: "No such checkout.session: cs_test_invalid"
+  /api/v1/subscriptions/cancel:
+    get:
+      summary: Handle subscription cancellation
+      description: Called by the frontend after a cancelled payment to mark the subscription as cancelled. No authentication is required as this is a Stripe redirect endpoint.
+      tags:
+        - Subscriptions
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+      responses:
+        '200':
+          description: Subscription cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Subscription cancelled successfully"
+                  redirect_url:
+                    type: string
+                    example: "https://movieexplorerplus.netlify.app/subscription-cancel?session_id=cs_test_..."
+                required:
+                  - message
+                  - redirect_url
+              example:
+                message: "Subscription cancelled successfully"
+                redirect_url: "https://movieexplorerplus.netlify.app/subscription-cancel?session_id=cs_test_..."
+        '400':
+          description: Invalid session ID (likely accessed directly)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid session_id provided: likely accessed directly"
+                  message:
+                    type: string
+                    example: "This endpoint should be accessed via Stripe redirect after cancellation."
+                  redirect_url:
+                    type: string
+                    example: "https://movieexplorerplus.netlify.app"
+                required:
+                  - error
+                  - message
+                  - redirect_url
         '404':
           description: Subscription not found
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Subscription not found"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Subscription not found or already processed"
         '422':
-          description: Failed to delete subscription
+          description: Failed to cancel subscription
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  error:
-                    type: string
-                    example: "Failed to delete subscription"
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid session ID"
 servers:
   - url: http://localhost:3000
     description: Development server

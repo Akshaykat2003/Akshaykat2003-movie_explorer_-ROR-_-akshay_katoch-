@@ -1,6 +1,5 @@
 ActiveAdmin.register Subscription do
-
-  permit_params :user_id, :plan, :status, :payment_id, :expiry_date
+  permit_params :plan, :status
 
 
   index do
@@ -9,70 +8,49 @@ ActiveAdmin.register Subscription do
     column :user
     column :plan
     column :status
-    column :expiry_date
     column :created_at
     column :updated_at
+    column :expiry_date
+    column :session_id
+    column :session_expires_at
     actions
   end
 
-  filter :user
-  filter :plan, as: :select, collection: Subscription.plans.keys.map { |plan| [plan.capitalize, plan] }
-  filter :status, as: :select, collection: Subscription.statuses.keys.map { |status| [status.capitalize, status] }
+  filter :user, as: :select, collection: -> { User.all.map { |u| [u.email, u.id] } }
+  filter :plan, as: :select, collection: Subscription.plans.keys
+  filter :status, as: :select, collection: Subscription.statuses.keys
+  filter :session_id
+  filter :session_expires_at
   filter :created_at
+  filter :updated_at
+  filter :expiry_date
 
+ 
   show do
     attributes_table do
+      row :id
       row :user
       row :plan
       row :status
-      row :payment_id
-      row :expiry_date
       row :created_at
       row :updated_at
+      row :expiry_date
+      row :session_id
+      row :session_expires_at
     end
-    active_admin_comments
   end
+
 
   form do |f|
-    f.inputs 'Subscription Details' do
-      f.input :user
-      f.input :plan, as: :select, collection: Subscription.plans.keys.map { |plan| [plan.capitalize, plan] }
-      f.input :status, as: :select, collection: Subscription.statuses.keys.map { |status| [status.capitalize, status] }
-      f.input :payment_id
-      f.input :expiry_date, as: :datepicker
+    f.inputs "Subscription Details" do
+      f.input :user, as: :select, collection: User.all.map { |u| [u.email, u.id] }, input_html: { disabled: true }
+      f.input :plan, as: :select, collection: Subscription.plans.keys
+      f.input :status, as: :select, collection: Subscription.statuses.keys
+      f.input :expiry_date, as: :datetime_picker
+  
+      f.input :session_id, input_html: { disabled: true }
+      f.input :session_expires_at, as: :datetime_picker, input_html: { disabled: true }
     end
     f.actions
-  end
-
- 
-  member_action :activate, method: :put do
-    subscription = Subscription.find(params[:id])
-    if subscription.activate!
-      redirect_to admin_subscription_path(subscription), notice: "Subscription activated!"
-    else
-      redirect_to admin_subscription_path(subscription), alert: "Activation failed!"
-    end
-  end
-
-  member_action :deactivate, method: :put do
-    subscription = Subscription.find(params[:id])
-    if subscription.deactivate!
-      redirect_to admin_subscription_path(subscription), notice: "Subscription deactivated!"
-    else
-      redirect_to admin_subscription_path(subscription), alert: "Deactivation failed!"
-    end
-  end
-
-
-  action_item :activate, only: :show do
-    if resource.status != 'active'
-      link_to 'Activate Subscription', activate_admin_subscription_path(resource), method: :put
-    end
-  end
-
-  action_item :deactivate, only: :show do
-    if resource.status != 'inactive'
-      link_to 'Deactivate Subscription', deactivate_admin_subscription_path(resource), method: :put
-    end
   end
 end

@@ -374,6 +374,7 @@ GEM
       activesupport (>= 6.1)
       sprockets (>= 3.0.0)
     stringio (3.1.7)
+    stripe (15.1.0)
     thor (1.3.2)
     tilt (2.6.0)
     timeout (0.4.3)
@@ -429,6 +430,7 @@ DEPENDENCIES
   rswag-ui
   sassc-rails
   sprockets-rails
+  stripe
   tzinfo-data
   web-console
 

@@ -1,67 +1,55 @@
 class Subscription < ApplicationRecord
-
-
   belongs_to :user
 
   enum plan: { basic: 0, gold: 1, platinum: 2 }
-  enum status: { active: 'active', inactive: 'inactive', cancelled: 'cancelled' }
+  enum status: { pending: 'pending', active: 'active', inactive: 'inactive', cancelled: 'cancelled' }
 
   validates :plan, :status, presence: true
-  validates :payment_id, presence: true, unless: -> { basic? }
+  validates :session_expires_at, presence: true, if: -> { pending? }
+  validates :expiry_date, presence: true, unless: -> { basic? }
 
   before_validation :set_default_status, on: :create
-
 
   def self.ransackable_associations(auth_object = nil)
     ["user"]
   end
 
-
   def self.ransackable_attributes(auth_object = nil)
-    %w[id status created_at updated_at user_id plan]  
+    %w[id status created_at updated_at user_id plan session_id session_expires_at expiry_date]
   end
 
-
-  def plan_duration_in_days
-    case plan
-    when "gold" then 90
-    when "platinum" then 180
-    else 0
-    end
+  def self.create_default_for_user(user)
+    create(user: user, plan: 'basic', status: 'active', created_at: Time.current, updated_at: Time.current)
+  rescue StandardError
+    nil
   end
-
 
   def activate!
-    if basic?
-      update(status: 'active', expiry_date: nil)
-    else
-      update(status: 'active', expiry_date: Time.current + plan_duration_in_days.days)
-    end
+    update!(status: 'active', expiry_date: basic? ? nil : expiry_date)
   end
-
 
   def deactivate!
-    update(status: 'inactive')
+    update!(status: 'inactive')
   end
 
- 
   def cancel!
-    update(status: 'cancelled')
+    update!(status: 'cancelled', session_id: nil, session_expires_at: nil)
   end
 
-  def upgrade_plan(new_plan)
-    return false if Subscription.plans[new_plan].nil?
-    new_expiry_date = Time.current + Subscription.new(plan: new_plan).plan_duration_in_days.days
-    update(plan: new_plan, expiry_date: new_expiry_date)
-  end
+  def change_plan(new_plan)
+    return false unless self.class.plans.key?(new_plan)
 
-  def downgrade_plan(new_plan)
-    upgrade_plan(new_plan)
+    new_expiry_date = case new_plan
+                      when 'gold' then Time.current + 1.minute
+                      when 'platinum' then Time.current + 1.month
+                      else nil
+                      end
+    update!(plan: new_plan, expiry_date: new_expiry_date)
+    true
   end
 
   def expired?
-    return false if basic?
-    expiry_date.present? && expiry_date <= Time.current
+    !basic? && expiry_date.present? && expiry_date <= Time.current
   end
 
   def active?
@@ -71,12 +59,19 @@ class Subscription < ApplicationRecord
 
   def check_and_deactivate_if_expired
     return if basic?
-    deactivate! if expired? && status != 'inactive'
+
+    if expired? && status != 'inactive'
+      update!(plan: 'basic', status: 'active', expiry_date: nil, session_id: nil, session_expires_at: nil)
+    end
+  end
+
+  def pending?
+    status == 'pending'
   end
 
   private
 
   def set_default_status
-    self.status ||= 'inactive'
+    self.status ||= 'pending'
   end
 end
