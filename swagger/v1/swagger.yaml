@@ -2,14 +2,14 @@ openapi: 3.0.3
 info:
   title: Movie Explorer API
   version: 1.0.0
-  description: API documentation for the Movie Explorer application
+  description: "API documentation for the Movie Explorer application. Supports web and mobile (React Native) clients. Web clients use POST /api/v1/subscriptions for Stripe Checkout; mobile clients use the same endpoint with 'X-Client-Type: mobile' header for Stripe Payment Intent, then POST /api/v1/subscriptions/confirm_payment to confirm payment. Most endpoints require a JWT token via /api/v1/login, entered as 'Bearer <token>' in the 'Authorize' button (some Swagger UI versions may require just the token—try both)."
 components:
   securitySchemes:
     BearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
+      description: "JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues."
   schemas:
     User:
       type: object
@@ -187,7 +187,7 @@ paths:
                 - mobile_number
       responses:
         '201':
-          description: User created successfully
+          description: "User created successfully"
           content:
             application/json:
               schema:
@@ -213,7 +213,7 @@ paths:
                   role: "user"
                   active_plan: "basic"
         '422':
-          description: Invalid input
+          description: "Invalid input"
           content:
             application/json:
               schema:
@@ -223,7 +223,7 @@ paths:
   /api/v1/login:
     post:
       summary: Login user
-      description: Logs in a user and returns a JWT token for authentication. Use this token in the 'Authorize' button (top-right) as 'Bearer <token>' to authenticate subsequent requests. Ensure there is a space between 'Bearer' and the token. Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues.
+      description: "Logs in a user and returns a JWT token for authentication. Use this token in the 'Authorize' button (top-right) as 'Bearer <token>' to authenticate subsequent requests. Ensure there is a space between 'Bearer' and the token. Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues."
       tags:
         - Users
       parameters: []
@@ -244,7 +244,7 @@ paths:
                 - password
       responses:
         '200':
-          description: Login successful
+          description: "Login successful"
           content:
             application/json:
               schema:
@@ -253,7 +253,7 @@ paths:
                   token:
                     type: string
                     example: "eyJhbGciOiJIUzI1NiJ9..."
-                    description: JWT token to be used for authenticated requests
+                    description: "JWT token to be used for authenticated requests"
                   user:
                     type: object
                     properties:
@@ -290,7 +290,7 @@ paths:
                   role: "user"
                   active_plan: "basic"
         '401':
-          description: Invalid credentials
+          description: "Invalid credentials"
           content:
             application/json:
               schema:
@@ -306,7 +306,7 @@ paths:
         - BearerAuth: []
       responses:
         '200':
-          description: Logout successful
+          description: "Logout successful"
           content:
             application/json:
               schema:
@@ -316,7 +316,7 @@ paths:
                     type: string
                     example: "Logout successful"
         '401':
-          description: Unauthorized (missing or invalid token)
+          description: "Unauthorized (missing or invalid token)"
           content:
             application/json:
               schema:
@@ -324,7 +324,7 @@ paths:
               example:
                 error: "Authorization header missing"
         '422':
-          description: Invalid token
+          description: "Invalid token"
           content:
             application/json:
               schema:
@@ -334,7 +334,7 @@ paths:
   /api/v1/update_preferences:
     post:
       summary: Update user preferences
-      description: Updates the user's notification preferences and/or device token for push notifications. Use this to enable/disable notifications or register a new device token. Requires a valid JWT token. First, use /api/v1/login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'.
+      description: "Updates the user's notification preferences and/or device token for push notifications. Use this to enable/disable notifications or register a new device token. Requires a valid JWT token. First, use /api/v1/login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Users
       security:
@@ -357,7 +357,7 @@ paths:
                   description: "Whether the user wants to receive notifications (optional, defaults to true if not provided)"
       responses:
         '200':
-          description: Preferences updated successfully
+          description: "Preferences updated successfully"
           content:
             application/json:
               schema:
@@ -367,7 +367,7 @@ paths:
                     type: string
                     example: "Preferences updated successfully"
         '401':
-          description: Unauthorized (invalid or missing JWT token)
+          description: "Unauthorized (invalid or missing JWT token)"
           content:
             application/json:
               schema:
@@ -375,7 +375,7 @@ paths:
               example:
                 error: "Authentication required"
         '422':
-          description: Invalid input
+          description: "Invalid input"
           content:
             application/json:
               schema:
@@ -383,7 +383,7 @@ paths:
               example:
                 error: "Device token is too long"
         '500':
-          description: Internal server error
+          description: "Internal server error"
           content:
             application/json:
               schema:
@@ -393,7 +393,7 @@ paths:
   /api/v1/movies:
     get:
       summary: List movies
-      description: Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre. No authentication is required, but a JWT token can be provided to identify the user.
+      description: "Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre. No authentication is required, but a JWT token can be provided to identify the user."
       tags:
         - Movies
       parameters:
@@ -402,22 +402,22 @@ paths:
           required: false
           schema:
             type: string
-          description: Search by title
+          description: "Search by title"
         - name: genre
           in: query
           required: false
           schema:
             type: string
-          description: Filter by genre
+          description: "Filter by genre"
         - name: page
           in: query
           required: false
           schema:
             type: integer
-          description: Page number for pagination
+          description: "Page number for pagination"
       responses:
         '200':
-          description: Movies retrieved successfully
+          description: "Movies retrieved successfully"
           content:
             application/json:
               schema:
@@ -434,7 +434,7 @@ paths:
                     type: integer
                     example: 1
         '500':
-          description: Internal server error
+          description: "Internal server error"
           content:
             application/json:
               schema:
@@ -443,7 +443,7 @@ paths:
                 error: "Internal server error"
     post:
       summary: Create a movie
-      description: Creates a new movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
+      description: "Creates a new movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -498,13 +498,13 @@ paths:
                 - banner
       responses:
         '201':
-          description: Movie created successfully
+          description: "Movie created successfully"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Movie'
         '403':
-          description: Forbidden (requires supervisor or admin role)
+          description: "Forbidden (requires supervisor or admin role)"
           content:
             application/json:
               schema:
@@ -512,7 +512,7 @@ paths:
               example:
                 error: "Forbidden: You do not have permission to perform this action"
         '422':
-          description: Validation errors
+          description: "Validation errors"
           content:
             application/json:
               schema:
@@ -520,7 +520,7 @@ paths:
               example:
                 error: "Title can't be blank"
         '500':
-          description: Internal server error
+          description: "Internal server error"
           content:
             application/json:
               schema:
@@ -530,12 +530,12 @@ paths:
   /api/v1/movies/all:
     get:
       summary: List all movies without pagination or filters
-      description: Retrieves all movies, regardless of the user's subscription plan, without pagination or filters. No authentication is required, but a JWT token can be provided to identify the user.
+      description: "Retrieves all movies, regardless of the user's subscription plan, without pagination or filters. No authentication is required, but a JWT token can be provided to identify the user."
       tags:
         - Movies
       responses:
         '200':
-          description: Movies retrieved successfully
+          description: "Movies retrieved successfully"
           content:
             application/json:
               schema:
@@ -559,7 +559,7 @@ paths:
                     poster_url: "https://example.com/poster.jpg"
                     banner_url: "https://example.com/banner.jpg"
         '500':
-          description: Internal server error
+          description: "Internal server error"
           content:
             application/json:
               schema:
@@ -569,7 +569,7 @@ paths:
   /api/v1/movies/{id}:
     get:
       summary: Show a movie
-      description: Retrieves the details of a specific movie. No authentication is required, and any user can view the details of any movie, regardless of their subscription plan.
+      description: "Retrieves the details of a specific movie. No authentication is required, and any user can view the details of any movie, regardless of their subscription plan."
       tags:
         - Movies
       parameters:
@@ -580,13 +580,13 @@ paths:
             type: integer
       responses:
         '200':
-          description: Movie retrieved successfully
+          description: "Movie retrieved successfully"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Movie'
         '404':
-          description: Movie not found
+          description: "Movie not found"
           content:
             application/json:
               schema:
@@ -594,7 +594,7 @@ paths:
               example:
                 error: "Movie not found"
         '500':
-          description: Internal server error
+          description: "Internal server error"
           content:
             application/json:
               schema:
@@ -603,7 +603,7 @@ paths:
                 error: "Internal server error"
     patch:
       summary: Update a movie
-      description: Updates an existing movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
+      description: "Updates an existing movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -656,13 +656,13 @@ paths:
                   description: "Banner image file (optional)"
       responses:
         '200':
-          description: Movie updated successfully
+          description: "Movie updated successfully"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Movie'
         '403':
-          description: Forbidden (requires supervisor or admin role)
+          description: "Forbidden (requires supervisor or admin role)"
           content:
             application/json:
               schema:
@@ -670,7 +670,7 @@ paths:
               example:
                 error: "Forbidden: You do not have permission to perform this action"
         '404':
-          description: Movie not found
+          description: "Movie not found"
           content:
             application/json:
               schema:
@@ -678,7 +678,7 @@ paths:
               example:
                 error: "Movie not found"
         '422':
-          description: Validation errors
+          description: "Validation errors"
           content:
             application/json:
               schema:
@@ -686,7 +686,7 @@ paths:
               example:
                 error: "Title can't be blank"
         '500':
-          description: Internal server error
+          description: "Internal server error"
           content:
             application/json:
               schema:
@@ -695,7 +695,7 @@ paths:
                 error: "Internal server error"
     delete:
       summary: Delete a movie
-      description: Deletes a movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'.
+      description: "Deletes a movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -708,7 +708,7 @@ paths:
             type: integer
       responses:
         '200':
-          description: Movie deleted successfully
+          description: "Movie deleted successfully"
           content:
             application/json:
               schema:
@@ -718,7 +718,7 @@ paths:
                     type: string
                     example: "Movie deleted successfully"
         '403':
-          description: Forbidden (requires supervisor or admin role)
+          description: "Forbidden (requires supervisor or admin role)"
           content:
             application/json:
               schema:
@@ -726,7 +726,7 @@ paths:
               example:
                 error: "Forbidden: You do not have permission to perform this action"
         '404':
-          description: Movie not found
+          description: "Movie not found"
           content:
             application/json:
               schema:
@@ -734,7 +734,7 @@ paths:
               example:
                 error: "Movie not found"
         '500':
-          description: Internal server error
+          description: "Internal server error"
           content:
             application/json:
               schema:
@@ -744,14 +744,14 @@ paths:
   /api/v1/subscriptions:
     get:
       summary: Get user's subscription
-      description: Retrieves the authenticated user's subscription. Returns a single subscription object or null if the user has no subscription. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
+      description: "Retrieves the authenticated user's subscription. Returns a single subscription object or null if the user has no subscription. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
       tags:
         - Subscriptions
       security:
         - BearerAuth: []
       responses:
         '200':
-          description: Subscription retrieved successfully
+          description: "Subscription retrieved successfully"
           content:
             application/json:
               schema:
@@ -773,7 +773,7 @@ paths:
                   session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
                   session_expires_at: "2025-05-07T08:30:00Z"
         '401':
-          description: Unauthorized (missing or invalid token)
+          description: "Unauthorized (missing or invalid token)"
           content:
             application/json:
               schema:
@@ -782,11 +782,20 @@ paths:
                 error: "Authenticated user not found"
     post:
       summary: Create or update a subscription
-      description: Creates or updates the user's subscription. For paid plans (gold, platinum), initiates a Stripe Checkout session and returns a checkout URL. For the basic plan, updates or creates a free subscription immediately. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'.
+      description: "Creates or updates the user's subscription. For web clients, initiates a Stripe Checkout session for paid plans (gold, platinum) and returns a checkout URL; for basic plan, creates a free subscription immediately. For mobile clients (React Native), include 'X-Client-Type: mobile' header to initiate a Stripe Payment Intent for paid plans, returning a client_secret for use with Stripe React Native SDK, then call POST /api/v1/subscriptions/confirm_payment to confirm payment. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
       tags:
         - Subscriptions
       security:
         - BearerAuth: []
+      parameters:
+        - name: X-Client-Type
+          in: header
+          required: false
+          schema:
+            type: string
+            enum: [web, mobile]
+            example: mobile
+          description: "Set to 'mobile' for React Native clients to initiate a Stripe Payment Intent instead of a Checkout Session. Defaults to 'web' if not provided."
       requestBody:
         content:
           application/json:
@@ -801,7 +810,7 @@ paths:
                 - plan
       responses:
         '201':
-          description: Subscription created or updated successfully
+          description: "Subscription created or updated successfully"
           content:
             application/json:
               schema:
@@ -817,7 +826,7 @@ paths:
                     required:
                       - message
                       - subscription_id
-                    description: Response for free basic subscription
+                    description: "Response for free basic subscription (both web and mobile clients)"
                   - type: object
                     properties:
                       checkout_url:
@@ -833,13 +842,56 @@ paths:
                       - checkout_url
                       - session_id
                       - subscription_id
-                    description: Response for paid plans (gold, platinum)
-              example:
-                checkout_url: "https://checkout.stripe.com/c/pay/cs_test_..."
-                session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
-                subscription_id: 1
+                    description: "Response for paid plans (gold, platinum) for web clients (X-Client-Type not set or set to 'web')"
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Payment Intent created"
+                      subscription_id:
+                        type: integer
+                        example: 1
+                      client_secret:
+                        type: string
+                        example: "pi_xxx_secret_yyy"
+                        description: "Client secret for the Stripe Payment Intent, to be used with the Stripe React Native SDK to collect payment details."
+                      amount:
+                        type: integer
+                        example: 499
+                        description: "Amount in INR as set in the Stripe Dashboard (e.g., 499 = ₹499)"
+                      currency:
+                        type: string
+                        example: "inr"
+                        description: "Currency of the payment"
+                    required:
+                      - message
+                      - subscription_id
+                      - client_secret
+                      - amount
+                      - currency
+                    description: "Response for paid plans (gold, platinum) for mobile clients (X-Client-Type: mobile)"
+              examples:
+                basic_subscription:
+                  summary: Basic subscription (web or mobile)
+                  value:
+                    message: "Free basic subscription created"
+                    subscription_id: 1
+                web_paid_subscription:
+                  summary: Paid subscription for web client
+                  value:
+                    checkout_url: "https://checkout.stripe.com/c/pay/cs_test_..."
+                    session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+                    subscription_id: 1
+                mobile_paid_subscription:
+                  summary: Paid subscription for mobile client
+                  value:
+                    message: "Payment Intent created"
+                    subscription_id: 1
+                    client_secret: "pi_xxx_secret_yyy"
+                    amount: 499
+                    currency: "inr"
         '401':
-          description: Unauthorized (missing or invalid token)
+          description: "Unauthorized (missing or invalid token)"
           content:
             application/json:
               schema:
@@ -847,7 +899,7 @@ paths:
               example:
                 error: "Authenticated user not found"
         '422':
-          description: Subscription creation or update failed
+          description: "Subscription creation or update failed"
           content:
             application/json:
               schema:
@@ -857,7 +909,7 @@ paths:
   /api/v1/subscriptions/success:
     get:
       summary: Handle successful subscription payment
-      description: Called by the frontend after a successful payment to complete the subscription. Updates the subscription status to active and sets the expiry date based on the Stripe subscription. No authentication is required as this is a Stripe redirect endpoint, but a JWT token can be provided if the user is logged in.
+      description: "Called by the frontend after a successful payment to complete the subscription. Updates the subscription status to active and sets the expiry date based on the Stripe subscription. No authentication is required as this is a Stripe redirect endpoint, but a JWT token can be provided if the user is logged in."
       tags:
         - Subscriptions
       parameters:
@@ -869,7 +921,7 @@ paths:
             example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
       responses:
         '200':
-          description: Subscription completed successfully
+          description: "Subscription completed successfully"
           content:
             application/json:
               schema:
@@ -899,7 +951,7 @@ paths:
                 plan: "platinum"
                 redirect_url: "https://movieexplorerplus.netlify.app/subscription-success?session_id=cs_test_...&plan=platinum"
         '400':
-          description: Invalid session ID (likely accessed directly)
+          description: "Invalid session ID (likely accessed directly)"
           content:
             application/json:
               schema:
@@ -923,7 +975,7 @@ paths:
                   - instructions
                   - redirect_url
         '404':
-          description: Subscription or user not found
+          description: "Subscription or user not found"
           content:
             application/json:
               schema:
@@ -931,7 +983,7 @@ paths:
               example:
                 error: "Subscription not found or already processed"
         '422':
-          description: Failed to complete subscription
+          description: "Failed to complete subscription"
           content:
             application/json:
               schema:
@@ -942,7 +994,7 @@ paths:
   /api/v1/subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
-      description: Called by the frontend after a cancelled payment to mark the subscription as cancelled. No authentication is required as this is a Stripe redirect endpoint.
+      description: "Called by the frontend after a cancelled payment to mark the subscription as cancelled. No authentication is required as this is a Stripe redirect endpoint."
       tags:
         - Subscriptions
       parameters:
@@ -954,7 +1006,7 @@ paths:
             example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
       responses:
         '200':
-          description: Subscription cancelled successfully
+          description: "Subscription cancelled successfully"
           content:
             application/json:
               schema:
@@ -973,7 +1025,7 @@ paths:
                 message: "Subscription cancelled successfully"
                 redirect_url: "https://movieexplorerplus.netlify.app/subscription-cancel?session_id=cs_test_..."
         '400':
-          description: Invalid session ID (likely accessed directly)
+          description: "Invalid session ID (likely accessed directly)"
           content:
             application/json:
               schema:
@@ -993,7 +1045,7 @@ paths:
                   - message
                   - redirect_url
         '404':
-          description: Subscription not found
+          description: "Subscription not found"
           content:
             application/json:
               schema:
@@ -1001,15 +1053,122 @@ paths:
               example:
                 error: "Subscription not found or already processed"
         '422':
-          description: Failed to cancel subscription
+          description: "Failed to cancel subscription"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
                 error: "Invalid session ID"
+  /api/v1/subscriptions/confirm_payment:
+    post:
+      summary: Confirm subscription payment (mobile clients only)
+      description: "Confirms a subscription payment for mobile clients (React Native) after collecting payment details using the Stripe React Native SDK. Updates the subscription status to active and sets the expiry date based on the Stripe Payment Intent. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                payment_intent_id:
+                  type: string
+                  example: "pi_xxx"
+                  description: "The Stripe Payment Intent ID, extracted from the client_secret provided by the POST /api/v1/subscriptions endpoint."
+                subscription_id:
+                  type: integer
+                  example: 1
+                  description: "The ID of the subscription to confirm, provided by the POST /api/v1/subscriptions endpoint."
+              required:
+                - payment_intent_id
+                - subscription_id
+      responses:
+        '200':
+          description: "Subscription confirmed successfully"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Subscription completed successfully"
+                  subscription_id:
+                    type: integer
+                    example: 1
+                  plan:
+                    type: string
+                    enum: [basic, gold, platinum]
+                    example: "platinum"
+                required:
+                  - message
+                  - subscription_id
+                  - plan
+              example:
+                message: "Subscription completed successfully"
+                subscription_id: 1
+                plan: "platinum"
+        '401':
+          description: "Unauthorized (missing or invalid token)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authenticated user not found"
+        '404':
+          description: "Subscription not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Subscription not found or already processed"
+        '422':
+          description: "Failed to confirm subscription"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Failed to complete subscription"
+                details: "Payment not completed"
+  /api/v1/subscriptions/check_status:
+    get:
+      summary: Check subscription status
+      description: "Retrieves the status of the authenticated user's subscription. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: "Subscription status retrieved successfully"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Subscription'
+        '401':
+          description: "Unauthorized (missing or invalid token)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Authenticated user not found"
+        '404':
+          description: "Subscription not found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Subscription not found"
 servers:
   - url: http://localhost:3000
-    description: Development server
+    description: "Development server"
   - url: https://movie-explorer-rorakshaykat2003-movie.onrender.com
-    description: Production server
+    description: "Production server"

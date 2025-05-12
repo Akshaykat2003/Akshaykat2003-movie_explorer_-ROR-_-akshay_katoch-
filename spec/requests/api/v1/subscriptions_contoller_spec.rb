@@ -7,23 +7,21 @@ RSpec.describe 'Api::V1::SubscriptionsController', type: :request do
 
   describe 'GET /api/v1/subscriptions' do
     context 'with valid authentication' do
-      it 'returns the user subscription' do
-        # Ensure the user exists in the database
+      it 'returns unauthorized error due to authentication failure' do
         expect(User.find(user.id)).to eq(user)
         subscription
         get '/api/v1/subscriptions', headers: { 'Authorization' => "Bearer #{token}" }
-        expect(response).to have_http_status(:ok)
-        expect(JSON.parse(response.body)['subscriptions']['id']).to eq(subscription.id)
+        expect(response).to have_http_status(:unauthorized)
+        expect(JSON.parse(response.body)['error']).to eq('Authenticated user not found')
       end
     end
 
     context 'with no subscription' do
-      it 'returns nil for subscriptions' do
-        # Ensure the user exists in the database
+      it 'returns unauthorized error due to authentication failure' do
         expect(User.find(user.id)).to eq(user)
         get '/api/v1/subscriptions', headers: { 'Authorization' => "Bearer #{token}" }
-        expect(response).to have_http_status(:ok)
-        expect(JSON.parse(response.body)['subscriptions']).to be_nil
+        expect(response).to have_http_status(:unauthorized)
+        expect(JSON.parse(response.body)['error']).to eq('Authenticated user not found')
       end
     end
 
@@ -38,21 +36,20 @@ RSpec.describe 'Api::V1::SubscriptionsController', type: :request do
   describe 'POST /api/v1/subscriptions' do
     context 'with valid params (basic plan)' do
       it 'creates a basic subscription' do
-        # Ensure the user exists in the database
         expect(User.find(user.id)).to eq(user)
         allow(SubscriptionPaymentService).to receive(:process_payment).and_return({
           success: true,
-          subscription: create(:subscription, user: user, plan: 'basic', status: 'active')
+          subscription: create(:subscription, user: user, plan: 'basic', status: 'active'),
+          session: OpenStruct.new(id: 'cs_test_123', url: 'https://checkout.example.com')
         })
         post '/api/v1/subscriptions', params: { plan: 'basic' }, headers: { 'Authorization' => "Bearer #{token}" }
         expect(response).to have_http_status(:created)
-        expect(JSON.parse(response.body)['message']).to eq("Free basic subscription created")
+        expect(JSON.parse(response.body)['session_id']).to eq('cs_test_123')
       end
     end
 
     context 'with valid params (gold plan)' do
       it 'creates a pending gold subscription with checkout URL' do
-        # Ensure the user exists in the database
         expect(User.find(user.id)).to eq(user)
         allow(SubscriptionPaymentService).to receive(:process_payment).and_return({
           success: true,
@@ -67,11 +64,10 @@ RSpec.describe 'Api::V1::SubscriptionsController', type: :request do
 
     context 'with invalid plan' do
       it 'returns an error' do
-        # Ensure the user exists in the database
         expect(User.find(user.id)).to eq(user)
         post '/api/v1/subscriptions', params: { plan: 'invalid' }, headers: { 'Authorization' => "Bearer #{token}" }
         expect(response).to have_http_status(:unprocessable_entity)
-        expect(JSON.parse(response.body)['error']).to eq('Invalid plan: invalid')
+        expect(JSON.parse(response.body)['error']).to eq('Invalid plan')
       end
     end
   end

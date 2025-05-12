@@ -1,7 +1,6 @@
-
 class Api::V1::SubscriptionsController < ApplicationController
-  before_action :authenticate_request, only: [:index, :create]
-  skip_before_action :verify_authenticity_token, only: [:create, :success, :cancel]
+  before_action :authenticate_request, only: [:index, :create, :check_subscription_status, :confirm_payment]  # Add check_subscription_status
+  skip_before_action :verify_authenticity_token, only: [:create, :success, :cancel, :confirm_payment]
 
   def index
     unless @current_user
@@ -12,23 +11,28 @@ class Api::V1::SubscriptionsController < ApplicationController
   end
 
   def create
-    unless @current_user
-      render json: { error: "Authenticated user not found" }, status: :unauthorized
-      return
-    end
+    plan = params[:plan]
+    client_type = request.headers['X-Client-Type'] || 'web'
+    is_mobile = client_type == 'mobile'
 
-    plan = subscription_params[:plan]&.downcase
-    unless %w[basic gold platinum].include?(plan)
-      render json: { error: "Invalid plan: #{plan}" }, status: :unprocessable_entity
-      return
-    end
+    result = SubscriptionPaymentService.process_payment(user: current_user, plan: plan, is_mobile: is_mobile)
 
-    result = SubscriptionPaymentService.process_payment(user: @current_user, plan: plan)
     if result[:success]
-      if plan == 'basic'
-        render json: { message: "Free basic subscription created", subscription_id: result[:subscription].id }, status: :created
+      subscription = result[:subscription]
+      if is_mobile
+        render json: {
+          message: 'Payment Intent created',
+          subscription_id: subscription.id,
+          client_secret: result[:payment_intent].client_secret,
+          amount: result[:amount], 
+          currency: result[:currency] 
+        }, status: :created
       else
-        render json: { checkout_url: result[:session].url, session_id: result[:session].id, subscription_id: result[:subscription].id }, status: :created
+        render json: {
+          checkout_url: result[:session].url,
+          session_id: result[:session].id,
+          subscription_id: subscription.id
+        }, status: :created
       end
     else
       render json: { error: result[:error] }, status: :unprocessable_entity
@@ -98,6 +102,53 @@ class Api::V1::SubscriptionsController < ApplicationController
     subscription.cancel!
     redirect_host = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"
     render json: { message: "Subscription cancelled successfully", redirect_url: "#{redirect_host}/subscription-cancel?session_id=#{session_id}" }, status: :ok
+  end
+
+  def confirm_payment
+    unless @current_user
+      render json: { error: "Authenticated user not found" }, status: :unauthorized
+      return
+    end
+
+    payment_intent_id = params[:payment_intent_id]
+    subscription_id = params[:subscription_id]
+
+    if payment_intent_id.blank? || subscription_id.blank?
+      render json: { error: "Payment Intent ID and Subscription ID are required" }, status: :unprocessable_entity
+      return
+    end
+
+    subscription = Subscription.find_by(id: subscription_id, user: @current_user, status: 'pending')
+    unless subscription
+      render json: { error: "Subscription not found or already processed" }, status: :not_found
+      return
+    end
+
+    result = SubscriptionPaymentService.complete_payment(user: @current_user, payment_intent_id: payment_intent_id)
+    if result[:success]
+      render json: {
+        message: "Subscription completed successfully",
+        subscription_id: result[:subscription].id,
+        plan: result[:subscription].plan
+      }, status: :ok
+    else
+      render json: { error: "Failed to complete subscription", details: result[:error] }, status: :unprocessable_entity
+    end
+  end
+
+  def check_subscription_status
+    unless @current_user
+      render json: { error: "Authenticated user not found" }, status: :unauthorized
+      return
+    end
+
+    subscription = @current_user.subscription
+    unless subscription
+      render json: { error: "Subscription not found" }, status: :not_found
+      return
+    end
+
+    render json: subscription.as_json, status: :ok
   end
 
   private
