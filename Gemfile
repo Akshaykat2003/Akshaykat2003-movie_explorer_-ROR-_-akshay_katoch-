@@ -41,18 +41,18 @@ group :development, :test do
 end
 
 group :development do
-  gem "web-console" # Browser-based console
-  gem "error_highlight", ">= 0.4.0", platforms: [:ruby] # Better error messages
+  gem "web-console" 
+  gem "error_highlight", ">= 0.4.0", platforms: [:ruby] 
 end
 
 group :test do
-  gem 'webmock' # For stubbing HTTP requests (e.g., Stripe, FCM)
-  gem 'database_cleaner-active_record' # For cleaning the database between tests
+  gem 'webmock' 
+  gem 'database_cleaner-active_record' 
 end
 
 gem "rswag"
 gem 'faker'
-gem "rspec-rails" # Testing framework
+gem "rspec-rails"
 gem 'rswag-api'
 gem 'rswag-ui'
 gem 'rswag-specs'
