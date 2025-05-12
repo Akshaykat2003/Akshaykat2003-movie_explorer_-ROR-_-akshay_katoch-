@@ -1,21 +1,31 @@
+
 class Api::V1::SubscriptionsController < ApplicationController
   before_action :authenticate_request, only: [:index, :create]
   skip_before_action :verify_authenticity_token, only: [:create, :success, :cancel]
 
   def index
+    unless @current_user
+      render json: { error: "Authenticated user not found" }, status: :unauthorized
+      return
+    end
     render json: { subscriptions: @current_user.subscription&.as_json || nil }, status: :ok
   end
 
   def create
-    render json: { error: "Authenticated user not found" }, status: :unauthorized unless @current_user
+    unless @current_user
+      render json: { error: "Authenticated user not found" }, status: :unauthorized
+      return
+    end
 
     plan = subscription_params[:plan]&.downcase
-    mapped_plan = %w[basic gold platinum].include?(plan) ? plan : (render json: { error: "Invalid plan: #{plan}" }, status: :unprocessable_entity and return)
+    unless %w[basic gold platinum].include?(plan)
+      render json: { error: "Invalid plan: #{plan}" }, status: :unprocessable_entity
+      return
+    end
 
-    result = SubscriptionPaymentService.process_payment(user: @current_user, plan: mapped_plan)
-
+    result = SubscriptionPaymentService.process_payment(user: @current_user, plan: plan)
     if result[:success]
-      if mapped_plan == 'basic'
+      if plan == 'basic'
         render json: { message: "Free basic subscription created", subscription_id: result[:subscription].id }, status: :created
       else
         render json: { checkout_url: result[:session].url, session_id: result[:session].id, subscription_id: result[:subscription].id }, status: :created
@@ -27,13 +37,28 @@ class Api::V1::SubscriptionsController < ApplicationController
 
   def success
     session_id = params[:session_id]
-    render json: { error: "Session ID is required" }, status: :unprocessable_entity if session_id.blank?
-    render json: invalid_session_response("payment"), status: :bad_request if session_id == '{CHECKOUT_SESSION_ID}'
-    render json: { error: "Invalid session ID" }, status: :unprocessable_entity if invalid_session_id?(session_id)
+    if session_id.blank?
+      render json: { error: "Session ID is required" }, status: :unprocessable_entity
+      return
+    end
+    if session_id == '{CHECKOUT_SESSION_ID}'
+      render json: invalid_session_response("payment"), status: :bad_request
+      return
+    end
+    if invalid_session_id?(session_id)
+      render json: { error: "Invalid session ID" }, status: :unprocessable_entity
+      return
+    end
 
     subscription = Subscription.find_by(session_id: session_id, status: 'pending')
-    render json: { error: "Subscription not found or already processed" }, status: :not_found unless subscription
-    render json: { error: "User not found" }, status: :not_found unless subscription.user
+    unless subscription
+      render json: { error: "Subscription not found or already processed" }, status: :not_found
+      return
+    end
+    unless subscription.user
+      render json: { error: "User not found" }, status: :not_found
+      return
+    end
 
     result = SubscriptionPaymentService.complete_payment(user: subscription.user, session_id: session_id)
     if result[:success]
@@ -51,12 +76,24 @@ class Api::V1::SubscriptionsController < ApplicationController
 
   def cancel
     session_id = params[:session_id]
-    render json: { error: "Session ID is required" }, status: :unprocessable_entity if session_id.blank?
-    render json: invalid_session_response("cancellation"), status: :bad_request if session_id == '{CHECKOUT_SESSION_ID}'
-    render json: { error: "Invalid session ID" }, status: :unprocessable_entity if invalid_session_id?(session_id)
+    if session_id.blank?
+      render json: { error: "Session ID is required" }, status: :unprocessable_entity
+      return
+    end
+    if session_id == '{CHECKOUT_SESSION_ID}'
+      render json: invalid_session_response("cancellation"), status: :bad_request
+      return
+    end
+    if invalid_session_id?(session_id)
+      render json: { error: "Invalid session ID" }, status: :unprocessable_entity
+      return
+    end
 
     subscription = Subscription.find_by(session_id: session_id, status: 'pending')
-    render json: { error: "Subscription not found or already processed" }, status: :not_found unless subscription
+    unless subscription
+      render json: { error: "Subscription not found or already processed" }, status: :not_found
+      return
+    end
 
     subscription.cancel!
     redirect_host = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"

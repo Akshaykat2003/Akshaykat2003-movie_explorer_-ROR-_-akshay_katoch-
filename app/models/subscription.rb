@@ -1,10 +1,46 @@
 class Subscription < ApplicationRecord
   belongs_to :user
 
+  # Define enums
   enum plan: { basic: 0, gold: 1, platinum: 2 }
   enum status: { pending: 'pending', active: 'active', inactive: 'inactive', cancelled: 'cancelled' }
 
+  attr_accessor :raw_plan, :raw_status
+
+  # Override the plan setter to store the raw value
+  def plan=(value)
+    self.raw_plan = value
+    if self.class.plans.key?(value.to_s)
+      super(value)
+    else
+      # Set the internal enum value to nil to prevent ArgumentError, validation will catch the invalid value
+      write_attribute(:plan, nil)
+    end
+  end
+
+  # Override the status setter to store the raw value
+  def status=(value)
+    self.raw_status = value
+    if self.class.statuses.key?(value.to_s)
+      super(value)
+    else
+      # Set the internal enum value to nil to prevent ArgumentError, validation will catch the invalid value
+      write_attribute(:status, nil)
+    end
+  end
+
+  # Override the getter for validation purposes
+  def plan
+    raw_plan || super
+  end
+
+  def status
+    raw_status || super
+  end
+
   validates :plan, :status, presence: true
+  validates :plan, inclusion: { in: %w[basic gold platinum], message: 'is not a valid plan' }
+  validates :status, inclusion: { in: %w[pending active inactive cancelled], message: 'is not a valid status' }
   validates :session_expires_at, presence: true, if: -> { pending? }
   validates :expiry_date, presence: true, unless: -> { basic? }
 

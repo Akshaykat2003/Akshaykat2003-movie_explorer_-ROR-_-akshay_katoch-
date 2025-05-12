@@ -45,6 +45,11 @@ group :development do
   gem "error_highlight", ">= 0.4.0", platforms: [:ruby] # Better error messages
 end
 
+group :test do
+  gem 'webmock' # For stubbing HTTP requests (e.g., Stripe, FCM)
+  gem 'database_cleaner-active_record' # For cleaning the database between tests
+end
+
 gem "rswag"
 gem 'faker'
 gem "rspec-rails" # Testing framework

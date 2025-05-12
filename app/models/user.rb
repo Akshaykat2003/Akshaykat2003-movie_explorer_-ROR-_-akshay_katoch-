@@ -43,7 +43,7 @@ class User < ApplicationRecord
   end
 
   def as_json_with_plan
-    as_json(except: [:password_digest]).merge(role: role, active_plan: active_plan)
+    as_json(except: [:password_digest]).merge('role' => role, 'active_plan' => active_plan)
   end
 
   def active_plan
@@ -60,5 +60,6 @@ class User < ApplicationRecord
   def ensure_subscription
     return if subscription.present?
     Subscription.create_default_for_user(self)
+    reload # Reload the user to refresh the subscription association
   end
 end

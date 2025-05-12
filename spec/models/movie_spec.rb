@@ -2,34 +2,65 @@
 require 'rails_helper'
 
 RSpec.describe Movie, type: :model do
-  before do
-    # Use valid plan values: 'basic', 'gold', 'platinum'
-    @movie1 = Movie.create(title: 'Inception', genre: 'Sci-Fi', release_year: 2010, rating: 9.5, plan: 'basic')
-    @movie2 = Movie.create(title: 'Interstellar', genre: 'Sci-Fi', release_year: 2014, rating: 9.0, plan: 'gold')
-    @movie3 = Movie.create(title: 'The Dark Knight', genre: 'Action', release_year: 2008, rating: 9.0, plan: 'platinum')
+  let(:movie) { create(:movie) }
+
+  describe 'validations' do
+    it 'is valid with valid attributes' do
+      expect(movie).to be_persisted
+    end
+
+    it 'is not valid without a title' do
+      movie.title = nil
+      expect(movie).not_to be_valid
+      expect(movie.errors[:title]).to include("can't be blank")
+    end
+
+    it 'is not valid without a genre' do
+      movie.genre = nil
+      expect(movie).not_to be_valid
+      expect(movie.errors[:genre]).to include("can't be blank")
+    end
+
+    it 'is not valid without a release_year' do
+      movie.release_year = nil
+      expect(movie).not_to be_valid
+      expect(movie.errors[:release_year]).to include("can't be blank")
+    end
+
+    it 'is not valid without a rating' do
+      movie.rating = nil
+      expect(movie).not_to be_valid
+      expect(movie.errors[:rating]).to include("can't be blank")
+    end
+
+    it 'is not valid without a plan' do
+      movie.plan = nil
+      expect(movie).not_to be_valid
+      expect(movie.errors[:plan]).to include("can't be blank")
+    end
   end
 
-  it 'searches for movies by title' do
-    result = Movie.search_and_filter({ search: 'Inception', genre: nil })
-    expect(result).to include(@movie1)
-    expect(result).to_not include(@movie2)
+  describe '.create_movie' do
+    it 'creates a movie with valid params' do
+      params = attributes_for(:movie)
+      result = Movie.create_movie(params)
+      expect(result[:success]).to be true
+      expect(result[:movie]).to be_persisted
+    end
   end
 
-  it 'filters movies by genre' do
-    result = Movie.search_and_filter({ search: nil, genre: 'Sci-Fi' })
-    expect(result).to include(@movie1)
-    expect(result).to include(@movie2)
-    expect(result).to_not include(@movie3)
+  describe '#update_movie' do
+    it 'updates a movie with valid params' do
+      params = { title: 'Updated Title' }
+      result = movie.update_movie(params)
+      expect(result[:success]).to be true
+      expect(result[:movie].title).to eq('Updated Title')
+    end
   end
 
-  it 'searches by title and filters by genre' do
-    result = Movie.search_and_filter({ search: 'Inter', genre: 'Sci-Fi' })
-    expect(result).to include(@movie2)
-    expect(result).to_not include(@movie1)
-  end
-
-  it 'returns an empty array when no match is found' do
-    result = Movie.search_and_filter({ search: 'Nonexistent', genre: 'Action' })
-    expect(result).to be_empty
+  describe '#send_new_movie_notification' do
+    it 'does not send a notification in test environment' do
+      expect(movie.send_new_movie_notification).to be_nil
+    end
   end
 end

@@ -1,3 +1,4 @@
+
 class Api::V1::UsersController < ApplicationController
   skip_before_action :verify_authenticity_token
   skip_before_action :authenticate_request, only: [:signup, :login]
@@ -30,21 +31,26 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def update_preferences
-    render json: { errors: ["Authentication required"] }, status: :unauthorized unless current_user
+    unless current_user
+      render json: { errors: ["Authentication required"] }, status: :unauthorized
+      return
+    end
+
     update_params = params.permit(:device_token, :notifications_enabled).to_h
     update_params[:notifications_enabled] = update_params[:notifications_enabled] != false if update_params.key?(:notifications_enabled)
     update_params.delete(:device_token) if update_params[:device_token] && current_user.device_token == update_params[:device_token]
     if update_params.empty?
       render json: { message: "Preferences unchanged" }, status: :ok
-    elsif current_user.update(update_params)
+      return
+    end
+
+    if current_user.update(update_params)
       render json: { message: "Preferences updated successfully" }, status: :ok
     else
       render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
     end
   rescue ActiveRecord::RecordNotUnique
     render json: { errors: ["Device token is already in use by another user"] }, status: :unprocessable_entity
-  rescue StandardError
-    render json: { errors: ["Internal server error"] }, status: :internal_server_error
   end
 
   def logout

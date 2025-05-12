@@ -72,7 +72,10 @@ module Api
       end
 
       def authorize_supervisor_or_admin
-        render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden unless @current_user&.role&.in?(%w[supervisor admin])
+        unless @current_user&.role&.in?(%w[supervisor admin])
+          render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden
+          return
+        end
       end
     end
   end
