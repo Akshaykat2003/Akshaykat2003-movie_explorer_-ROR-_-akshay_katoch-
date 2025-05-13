@@ -1,6 +1,9 @@
 module Api
   module V1
     class MoviesController < ApplicationController
+      # Skip CSRF protection for all actions in this controller
+      skip_before_action :verify_authenticity_token
+
       before_action :set_movie, only: [:show, :update, :destroy]
       before_action :authorize_supervisor_or_admin, only: [:create, :update, :destroy]
       skip_before_action :authenticate_request, only: [:index, :show, :all]
@@ -16,6 +19,22 @@ module Api
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
+      def create
+        Rails.logger.info("Movie Params: #{movie_params.inspect}")
+        result = Movie.create_movie(movie_params)
+        if result[:success]
+          Rails.logger.info("Movie Created: #{result[:movie].inspect}")
+          result[:movie].send_new_movie_notification
+          render json: result[:movie].as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :created
+        else
+          Rails.logger.info("Validation Errors: #{result[:errors].inspect}")
+          render json: { error: result[:errors] }, status: :unprocessable_entity
+        end
+      rescue StandardError => e
+        Rails.logger.info("StandardError: #{e.message}")
+        render json: { error: "Internal server error" }, status: :internal_server_error
+      end
+
       def all
         movies = Movie.all
         render json: { movies: movies.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]) }, status: :ok
@@ -25,18 +44,6 @@ module Api
 
       def show
         render json: @movie.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :ok
-      rescue StandardError
-        render json: { error: "Internal server error" }, status: :internal_server_error
-      end
-
-      def create
-        result = Movie.create_movie(movie_params)
-        if result[:success]
-          result[:movie].send_new_movie_notification
-          render json: result[:movie].as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :created
-        else
-          render json: { error: result[:errors] }, status: :unprocessable_entity
-        end
       rescue StandardError
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
