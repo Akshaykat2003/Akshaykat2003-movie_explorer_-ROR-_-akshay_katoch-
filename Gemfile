@@ -50,6 +50,11 @@ group :test do
   gem 'database_cleaner-active_record' 
 end
 
+group :test do
+  gem 'simplecov', require: false
+  gem 'simplecov-lcov', require: false
+end
+
 gem "rswag"
 gem 'faker'
 gem "rspec-rails"

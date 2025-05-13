@@ -154,9 +154,10 @@ class Api::V1::SubscriptionsController < ApplicationController
   private
 
   def subscription_params
-    (params[:subscription] || params).permit(:plan).tap do |whitelisted|
-      whitelisted[:plan] = whitelisted[:plan] if whitelisted[:plan].present? && Subscription.plans.keys.include?(whitelisted[:plan].downcase)
-    end
+    permitted = (params[:subscription] || params).permit(:plan)
+    plan = permitted[:plan]&.downcase
+    permitted[:plan] = plan if plan && Subscription.plans.keys.include?(plan)
+    permitted
   end
 
   def invalid_session_id?(session_id)

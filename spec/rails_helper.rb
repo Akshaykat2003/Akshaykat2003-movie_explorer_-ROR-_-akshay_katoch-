@@ -1,10 +1,10 @@
-# spec/rails_helper.rb
 require 'spec_helper'
 
-# Ensure Rails environment is only loaded via spec_helper.rb
-unless defined?(Rails)
-  raise "Rails environment must be loaded via spec_helper.rb"
-end
+# Load Rails environment
+require_relative '../config/environment'
+
+# Prevent database truncation if the environment is production
+abort("The Rails environment is running in production mode!") if Rails.env.production?
 
 require 'rspec/rails'
 require 'factory_bot_rails'
@@ -36,4 +36,11 @@ RSpec.configure do |config|
 
   # Filter Rails gems from backtraces for cleaner error messages
   config.filter_rails_from_backtrace!
+
+  # Optional: Add global setup
+  config.before(:suite) do
+    # Ensure the database is clean before the suite runs
+    DatabaseCleaner.strategy = :transaction
+    DatabaseCleaner.clean_with(:truncation)
+  end
 end
