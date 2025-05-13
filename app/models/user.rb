@@ -32,7 +32,7 @@ class User < ApplicationRecord
   end
 
   def generate_jwt
-    JWT.encode({ user_id: id, exp: 1.day.from_now.to_i }, Rails.application.credentials.secret_key_base)
+    JWT.encode({ user_id: id, exp: 1.day.from_now.to_i, role: role }, Rails.application.credentials.secret_key_base)
   end
 
   def self.decode_jwt(token)
@@ -60,6 +60,6 @@ class User < ApplicationRecord
   def ensure_subscription
     return if subscription.present?
     Subscription.create_default_for_user(self)
-    reload # Reload the user to refresh the subscription association
+    reload 
   end
 end
