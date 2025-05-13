@@ -3,7 +3,6 @@ module Api
     class MoviesController < ApplicationController
   
       skip_before_action :verify_authenticity_token
-
       before_action :set_movie, only: [:show, :update, :destroy]
       before_action :authorize_supervisor_or_admin, only: [:create, :update, :destroy]
       skip_before_action :authenticate_request, only: [:index, :show, :all]
@@ -20,18 +19,14 @@ module Api
       end
 
       def create
-        Rails.logger.info("Movie Params: #{movie_params.inspect}")
         result = Movie.create_movie(movie_params)
         if result[:success]
-          Rails.logger.info("Movie Created: #{result[:movie].inspect}")
           result[:movie].send_new_movie_notification
           render json: result[:movie].as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :created
         else
-          Rails.logger.info("Validation Errors: #{result[:errors].inspect}")
           render json: { error: result[:errors] }, status: :unprocessable_entity
         end
       rescue StandardError => e
-        Rails.logger.info("StandardError: #{e.message}")
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
@@ -81,13 +76,10 @@ module Api
       def authorize_supervisor_or_admin
         user_id = @current_user&.id || 'none'
         user_role = @current_user&.role || 'none'
-        Rails.logger.info("Authorization check for user_id: #{user_id}, role: #{user_role}, action: #{action_name}")
         unless @current_user&.role&.in?(%w[supervisor admin])
-          Rails.logger.info("Authorization failed for user_id: #{user_id}, role: #{user_role}, action: #{action_name}")
           render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden
           return
         end
-        Rails.logger.info("Authorization succeeded for user_id: #{user_id}, role: #{user_role}, action: #{action_name}")
       end
     end
   end
