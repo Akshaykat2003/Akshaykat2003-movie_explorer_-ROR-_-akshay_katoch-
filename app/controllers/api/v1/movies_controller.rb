@@ -79,10 +79,15 @@ module Api
       end
 
       def authorize_supervisor_or_admin
+        user_id = @current_user&.id || 'none'
+        user_role = @current_user&.role || 'none'
+        Rails.logger.info("Authorization check for user_id: #{user_id}, role: #{user_role}, action: #{action_name}")
         unless @current_user&.role&.in?(%w[supervisor admin])
+          Rails.logger.info("Authorization failed for user_id: #{user_id}, role: #{user_role}, action: #{action_name}")
           render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden
           return
         end
+        Rails.logger.info("Authorization succeeded for user_id: #{user_id}, role: #{user_role}, action: #{action_name}")
       end
     end
   end
