@@ -35,6 +35,7 @@ class User < ApplicationRecord
     JWT.encode({ user_id: id, exp: 1.day.from_now.to_i, role: role }, Rails.application.credentials.secret_key_base)
   end
 
+
   def self.decode_jwt(token)
     decoded = JWT.decode(token, Rails.application.credentials.secret_key_base)[0]
     find(decoded["user_id"])
@@ -52,7 +53,6 @@ class User < ApplicationRecord
   end
 
   private
-
   def downcase_email
     self.email = email.downcase if email.present?
   end

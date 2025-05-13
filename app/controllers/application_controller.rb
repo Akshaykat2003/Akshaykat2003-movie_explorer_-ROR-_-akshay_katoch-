@@ -3,6 +3,7 @@ class ApplicationController < ActionController::Base
   before_action :authenticate_request, unless: :active_admin_controller?
 
   private
+
   def authenticate_request
     header = request.headers['Authorization']
     token = header&.split(/\s+/)&.last
@@ -20,8 +21,7 @@ class ApplicationController < ActionController::Base
     rescue ActiveRecord::RecordNotFound
       render json: { error: 'Unauthorized: User not found' }, status: :unauthorized
       return
-    rescue StandardError => e
-     : #{e.message}")
+    rescue StandardError
       render json: { error: 'Internal server error' }, status: :internal_server_error
       return
     end
@@ -31,26 +31,19 @@ class ApplicationController < ActionController::Base
     @current_user
   end
 
-
   def authenticate_admin_user!
-    Rails.logger.info("authenticate_admin_user! called for path: #{request.path}, controller: #{controller_path} - Skipping authentication")
     true
   end
 
- 
   def current_admin_user
-    Rails.logger.info("current_admin_user called for path: #{request.path}, controller: #{controller_path} - Returning nil")
-    nil 
+    nil
   end
 
- 
   def authorize_supervisor_or_admin
     return if active_admin_controller?
-    user_id = @current_user&.id || 'none'
-    user_role = @current_user&.role || 'none'
+
     unless @current_user&.role&.in?(%w[supervisor admin])
-      render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden
-      return
+      render json: { error: 'Forbidden: You do not have permission to perform this action' }, status: :forbidden
     end
   end
 
