@@ -45,7 +45,7 @@ class Api::V1::UsersController < ApplicationController
 
   def logout
     token = request.headers['Authorization']&.split(' ')&.last
-    result = BlacklistedToken.blacklist(token, Rails.application.secrets.secret_key_base)
+    result = BlacklistedToken.blacklist(token, Rails.application.credentials.secret_key_base)
     if result[:success]
       render json: { message: result[:message] }, status: :ok
     else

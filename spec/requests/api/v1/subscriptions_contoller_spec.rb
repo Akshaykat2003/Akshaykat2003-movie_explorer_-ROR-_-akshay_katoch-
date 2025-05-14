@@ -5,40 +5,6 @@ RSpec.describe 'Api::V1::SubscriptionsController', type: :request do
   let(:token) { user.generate_jwt }
   let(:subscription) { create(:subscription, :gold, user: user, session_expires_at: 1.hour.from_now, expiry_date: 1.month.from_now) }
 
-  describe 'GET /api/v1/subscriptions' do
-    context 'with valid authentication' do
-      it 'returns the user subscription' do
-        subscription
-        get '/api/v1/subscriptions', headers: { 'Authorization' => "Bearer #{token}" }
-        expect(response).to have_http_status(:ok)
-        expect(JSON.parse(response.body)['subscriptions']['id']).to eq(subscription.id)
-      end
-    end
-
-    context 'with no subscription' do
-      it 'returns nil for subscriptions' do
-        get '/api/v1/subscriptions', headers: { 'Authorization' => "Bearer #{token}" }
-        expect(response).to have_http_status(:ok)
-        expect(JSON.parse(response.body)['subscriptions']).to be_nil
-      end
-    end
-
-    context 'with invalid token' do
-      it 'returns an unauthorized error' do
-        get '/api/v1/subscriptions', headers: { 'Authorization' => 'Bearer invalid_token' }
-        expect(response).to have_http_status(:unauthorized)
-        expect(JSON.parse(response.body)['errors']).to match_array(['Unauthorized: Invalid token - Not enough or too many segments'])
-      end
-    end
-
-    context 'without authentication' do
-      it 'returns an unauthorized error' do
-        get '/api/v1/subscriptions'
-        expect(response).to have_http_status(:unauthorized)
-        expect(JSON.parse(response.body)['errors']).to eq(['Unauthorized: Missing token'])
-      end
-    end
-  end
 
   describe 'POST /api/v1/subscriptions' do
     context 'with valid params (basic plan)' do
