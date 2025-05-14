@@ -22,7 +22,7 @@ Rails.application.routes.draw do
       post   'subscriptions',                  to: 'subscriptions#create'
       get    'subscriptions/success',          to: 'subscriptions#success'
       get    'subscriptions/cancel',           to: 'subscriptions#cancel'
-      get    'subscriptions/:id/check_status', to: 'subscriptions#check_subscription_status'
+      get    'subscriptions/check_status', to: 'subscriptions#check_subscription_status'
       post   'subscriptions/confirm_payment',  to: 'subscriptions#confirm_payment'
     end
   end

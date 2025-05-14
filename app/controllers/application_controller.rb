@@ -3,7 +3,6 @@ class ApplicationController < ActionController::Base
   before_action :authenticate_request, unless: :active_admin_controller?
 
   private
-
   def authenticate_request
     header = request.headers['Authorization']
     token = header&.split(/\s+/)&.last

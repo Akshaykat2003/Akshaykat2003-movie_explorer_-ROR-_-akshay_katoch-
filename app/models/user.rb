@@ -31,6 +31,23 @@ class User < ApplicationRecord
     user if user&.authenticate(password)
   end
 
+  def self.update_preferences(user, params)
+    update_params = params.to_h.dup
+    update_params[:notifications_enabled] = update_params[:notifications_enabled] != false if update_params.key?(:notifications_enabled)
+    update_params.delete(:device_token) if update_params[:device_token] && user.device_token == update_params[:device_token]
+    if update_params.empty?
+      Rails.logger.info("No changes to apply for user preferences: user_id=#{user.id}")
+      return { success: true, message: "Preferences unchanged" }
+    end
+    if user.update(update_params)
+      { success: true, message: "Preferences updated successfully", user: user }
+    else
+      { success: false, errors: user.errors.full_messages }
+    end
+  rescue ActiveRecord::RecordNotUnique => e
+    { success: false, errors: ["Device token is already in use by another user"] }
+  end
+
   def generate_jwt
     JWT.encode({ user_id: id, exp: 1.day.from_now.to_i, role: role }, Rails.application.credentials.secret_key_base)
   end

@@ -1,7 +1,6 @@
 module Api
   module V1
     class MoviesController < ApplicationController
-  
       skip_before_action :verify_authenticity_token
       before_action :set_movie, only: [:show, :update, :destroy]
       before_action :authorize_supervisor_or_admin, only: [:create, :update, :destroy]
@@ -62,7 +61,6 @@ module Api
       end
 
       private
-
       def set_movie
         @movie = Movie.find(params[:id])
       rescue ActiveRecord::RecordNotFound
@@ -71,15 +69,6 @@ module Api
 
       def movie_params
         params.permit(:title, :genre, :release_year, :rating, :director, :duration, :description, :plan, :poster, :banner)
-      end
-
-      def authorize_supervisor_or_admin
-        user_id = @current_user&.id || 'none'
-        user_role = @current_user&.role || 'none'
-        unless @current_user&.role&.in?(%w[supervisor admin])
-          render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden
-          return
-        end
       end
     end
   end

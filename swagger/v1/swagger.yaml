@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: Movie Explorer API
   version: 1.0.0
-  description: "API documentation for the Movie Explorer application. Supports web and mobile (React Native) clients. Web clients use POST /api/v1/subscriptions for Stripe Checkout; mobile clients use the same endpoint with 'X-Client-Type: mobile' header for Stripe Payment Intent, then POST /api/v1/subscriptions/confirm_payment to confirm payment. Most endpoints require a JWT token via /api/v1/login, entered as 'Bearer <token>' in the 'Authorize' button (some Swagger UI versions may require just the token—try both)."
+  description: "API documentation for the Movie Explorer application."
 components:
   securitySchemes:
     BearerAuth:
@@ -31,14 +31,23 @@ components:
           example: "9876543210"
         role:
           type: string
-          enum: [user, supervisor, admin]
+          enum: [user, supervisor]
           example: "user"
         active_plan:
           type: string
           enum: [basic, gold, platinum]
           example: "basic"
-          nullable: true
           description: "The user's active subscription plan (e.g., basic, gold, platinum). Will always be present for users (default: basic)."
+        device_token:
+          type: string
+          example: "fcm-device-token-here"
+          nullable: true
+          description: "FCM device token for push notifications, if set."
+        notifications_enabled:
+          type: boolean
+          example: true
+          nullable: true
+          description: "Whether the user has enabled notifications."
       required:
         - id
         - first_name
@@ -46,6 +55,7 @@ components:
         - email
         - mobile_number
         - role
+        - active_plan
     Movie:
       type: object
       properties:
@@ -68,22 +78,27 @@ components:
         director:
           type: string
           example: "Chad Stahelski"
+          nullable: true
         duration:
           type: integer
           example: 120
+          nullable: true
         description:
           type: string
           example: "John Wick's style of shooting baddi"
+          nullable: true
         plan:
           type: string
           enum: [basic, gold, platinum]
           example: "basic"
         poster_url:
           type: string
-          example: "https://example.com/poster.jpg"
+          example: "https://res.cloudinary.com/example/image/upload/v1234567890/poster.jpg"
+          nullable: true
         banner_url:
           type: string
-          example: "https://example.com/banner.jpg"
+          example: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
+          nullable: true
       required:
         - id
         - title
@@ -91,8 +106,6 @@ components:
         - release_year
         - rating
         - plan
-        - poster_url
-        - banner_url
     Subscription:
       type: object
       properties:
@@ -108,20 +121,20 @@ components:
           example: "platinum"
         status:
           type: string
-          enum: [pending, active, cancelled, expired]
+          enum: [pending, active, inactive, cancelled]
           example: "active"
         created_at:
           type: string
           format: date-time
-          example: "2025-05-07T08:00:00Z"
+          example: "2025-05-14T02:24:00Z"
         updated_at:
           type: string
           format: date-time
-          example: "2025-05-07T08:00:00Z"
+          example: "2025-05-14T02:24:00Z"
         expiry_date:
           type: string
           format: date-time
-          example: "2025-11-07T08:00:00Z"
+          example: "2025-06-14T02:24:00Z"
           nullable: true
         session_id:
           type: string
@@ -130,7 +143,7 @@ components:
         session_expires_at:
           type: string
           format: date-time
-          example: "2025-05-07T08:30:00Z"
+          example: "2025-05-14T02:54:00Z"
           nullable: true
       required:
         - id
@@ -142,15 +155,13 @@ components:
     Error:
       type: object
       properties:
-        error:
-          type: string
-          example: "Error message"
-        details:
-          type: string
-          example: "Additional error details"
-          nullable: true
+        errors:
+          type: array
+          items:
+            type: string
+          example: ["Error message"]
       required:
-        - error
+        - errors
 paths:
   /api/v1/signup:
     post:
@@ -212,6 +223,8 @@ paths:
                   mobile_number: "9876543210"
                   role: "user"
                   active_plan: "basic"
+                  device_token: null
+                  notifications_enabled: null
         '422':
           description: "Invalid input"
           content:
@@ -219,7 +232,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Email has already been taken"
+                errors: ["Email has already been taken"]
   /api/v1/login:
     post:
       summary: Login user
@@ -255,40 +268,19 @@ paths:
                     example: "eyJhbGciOiJIUzI1NiJ9..."
                     description: "JWT token to be used for authenticated requests"
                   user:
-                    type: object
-                    properties:
-                      id:
-                        type: integer
-                        example: 1
-                      name:
-                        type: string
-                        example: "Akshay Katoch"
-                      email:
-                        type: string
-                        example: akshaykatoch38@gmail.com
-                      role:
-                        type: string
-                        example: user
-                        enum: [user, supervisor, admin]
-                      active_plan:
-                        type: string
-                        enum: [basic, gold, platinum]
-                        example: "basic"
-                        nullable: true
-                        description: "The user's active subscription plan (e.g., basic, gold, platinum). Will always be present for users (default: basic)."
-                    required:
-                      - id
-                      - name
-                      - email
-                      - role
+                    $ref: '#/components/schemas/User'
               example:
                 token: "eyJhbGciOiJIUzI1NiJ9..."
                 user:
                   id: 1
-                  name: "Akshay Katoch"
+                  first_name: "Akshay"
+                  last_name: "Katoch"
                   email: "akshaykatoch38@gmail.com"
+                  mobile_number: "9876543210"
                   role: "user"
                   active_plan: "basic"
+                  device_token: null
+                  notifications_enabled: null
         '401':
           description: "Invalid credentials"
           content:
@@ -296,7 +288,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Invalid email or password"
+                errors: ["Invalid email or password"]
   /api/v1/logout:
     post:
       summary: Logout user
@@ -315,6 +307,8 @@ paths:
                   message:
                     type: string
                     example: "Logout successful"
+              example:
+                message: "Logout successful"
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
@@ -322,7 +316,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Authorization header missing"
+                errors: ["Authorization header missing"]
         '422':
           description: "Invalid token"
           content:
@@ -330,7 +324,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Invalid token"
+                errors: ["Invalid token"]
   /api/v1/update_preferences:
     post:
       summary: Update user preferences
@@ -366,6 +360,20 @@ paths:
                   message:
                     type: string
                     example: "Preferences updated successfully"
+                  user:
+                    $ref: '#/components/schemas/User'
+              example:
+                message: "Preferences updated successfully"
+                user:
+                  id: 1
+                  first_name: "Akshay"
+                  last_name: "Katoch"
+                  email: "akshaykatoch38@gmail.com"
+                  mobile_number: "9876543210"
+                  role: "user"
+                  active_plan: "basic"
+                  device_token: "fcm-device-token-here"
+                  notifications_enabled: true
         '401':
           description: "Unauthorized (invalid or missing JWT token)"
           content:
@@ -373,7 +381,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Authentication required"
+                errors: ["Authentication required"]
         '422':
           description: "Invalid input"
           content:
@@ -381,15 +389,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Device token is too long"
-        '500':
-          description: "Internal server error"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                error: "Internal server error"
+                errors: ["Device token is already in use by another user"]
   /api/v1/movies:
     get:
       summary: List movies
@@ -433,6 +433,21 @@ paths:
                   current_page:
                     type: integer
                     example: 1
+              example:
+                movies:
+                  - id: 1
+                    title: "John Wick"
+                    genre: "Action"
+                    release_year: 2014
+                    rating: 8.8
+                    director: "Chad Stahelski"
+                    duration: 120
+                    description: "John Wick's style of shooting baddi"
+                    plan: "basic"
+                    poster_url: "https://res.cloudinary.com/example/image/upload/v1234567890/poster.jpg"
+                    banner_url: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
+                total_pages: 1
+                current_page: 1
         '500':
           description: "Internal server error"
           content:
@@ -440,10 +455,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Internal server error"
+                errors: ["Internal server error"]
     post:
       summary: Create a movie
-      description: "Creates a new movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
+      description: "Creates a new movie. Requires supervisor role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -456,7 +471,7 @@ paths:
               properties:
                 title:
                   type: string
-                  example: "John wick"
+                  example: "John Wick"
                 genre:
                   type: string
                   example: "Action"
@@ -503,14 +518,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Movie'
+              example:
+                id: 1
+                title: "John Wick"
+                genre: "Action"
+                release_year: 2014
+                rating: 8.8
+                director: "Chad Stahelski"
+                duration: 120
+                description: "John Wick's style of shooting baddi"
+                plan: "basic"
+                poster_url: "https://res.cloudinary.com/example/image/upload/v1234567890/poster.jpg"
+                banner_url: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
         '403':
-          description: "Forbidden (requires supervisor or admin role)"
+          description: "Forbidden (requires supervisor role)"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Forbidden: You do not have permission to perform this action"
+                errors: ["Forbidden: You do not have permission to perform this action"]
         '422':
           description: "Validation errors"
           content:
@@ -518,7 +545,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Title can't be blank"
+                errors: ["Title can't be blank"]
         '500':
           description: "Internal server error"
           content:
@@ -526,7 +553,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Internal server error"
+                errors: ["Internal server error"]
   /api/v1/movies/all:
     get:
       summary: List all movies without pagination or filters
@@ -556,8 +583,8 @@ paths:
                     duration: 120
                     description: "John Wick's style of shooting baddi"
                     plan: "basic"
-                    poster_url: "https://example.com/poster.jpg"
-                    banner_url: "https://example.com/banner.jpg"
+                    poster_url: "https://res.cloudinary.com/example/image/upload/v1234567890/poster.jpg"
+                    banner_url: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
         '500':
           description: "Internal server error"
           content:
@@ -565,7 +592,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Internal server error"
+                errors: ["Internal server error"]
   /api/v1/movies/{id}:
     get:
       summary: Show a movie
@@ -585,6 +612,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Movie'
+              example:
+                id: 1
+                title: "John Wick"
+                genre: "Action"
+                release_year: 2014
+                rating: 8.8
+                director: "Chad Stahelski"
+                duration: 120
+                description: "John Wick's style of shooting baddi"
+                plan: "basic"
+                poster_url: "https://res.cloudinary.com/example/image/upload/v1234567890/poster.jpg"
+                banner_url: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
         '404':
           description: "Movie not found"
           content:
@@ -592,7 +631,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Movie not found"
+                errors: ["Movie not found"]
         '500':
           description: "Internal server error"
           content:
@@ -600,10 +639,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Internal server error"
+                errors: ["Internal server error"]
     patch:
       summary: Update a movie
-      description: "Updates an existing movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
+      description: "Updates an existing movie. Requires supervisor role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -622,7 +661,7 @@ paths:
               properties:
                 title:
                   type: string
-                  example: "John wick Updated"
+                  example: "John Wick Updated"
                 genre:
                   type: string
                   example: "Action"
@@ -661,14 +700,26 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Movie'
+              example:
+                id: 1
+                title: "John Wick Updated"
+                genre: "Action"
+                release_year: 2014
+                rating: 8.8
+                director: "Chad Stahelski"
+                duration: 120
+                description: "John Wick's style of shooting baddi, updated"
+                plan: "basic"
+                poster_url: "https://res.cloudinary.com/example/image/upload/v1234567890/poster_updated.jpg"
+                banner_url: "https://res.cloudinary.com/example/image/upload/v1234567890/banner_updated.jpg"
         '403':
-          description: "Forbidden (requires supervisor or admin role)"
+          description: "Forbidden (requires supervisor role)"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Forbidden: You do not have permission to perform this action"
+                errors: ["Forbidden: You do not have permission to perform this action"]
         '404':
           description: "Movie not found"
           content:
@@ -676,7 +727,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Movie not found"
+                errors: ["Movie not found"]
         '422':
           description: "Validation errors"
           content:
@@ -684,7 +735,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Title can't be blank"
+                errors: ["Title can't be blank"]
         '500':
           description: "Internal server error"
           content:
@@ -692,10 +743,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Internal server error"
+                errors: ["Internal server error"]
     delete:
       summary: Delete a movie
-      description: "Deletes a movie. Requires supervisor or admin role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
+      description: "Deletes a movie. Requires supervisor role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -718,13 +769,13 @@ paths:
                     type: string
                     example: "Movie deleted successfully"
         '403':
-          description: "Forbidden (requires supervisor or admin role)"
+          description: "Forbidden (requires supervisor role)"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Forbidden: You do not have permission to perform this action"
+                errors: ["Forbidden: You do not have permission to perform this action"]
         '404':
           description: "Movie not found"
           content:
@@ -732,7 +783,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Movie not found"
+                errors: ["Movie not found"]
         '500':
           description: "Internal server error"
           content:
@@ -740,7 +791,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Internal server error"
+                errors: ["Internal server error"]
   /api/v1/subscriptions:
     get:
       summary: Get user's subscription
@@ -767,11 +818,11 @@ paths:
                   user_id: 1
                   plan: "platinum"
                   status: "active"
-                  created_at: "2025-05-07T08:00:00Z"
-                  updated_at: "2025-05-07T08:00:00Z"
-                  expiry_date: "2025-11-07T08:00:00Z"
+                  created_at: "2025-05-14T02:24:00Z"
+                  updated_at: "2025-05-14T02:24:00Z"
+                  expiry_date: "2025-06-14T02:24:00Z"
                   session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
-                  session_expires_at: "2025-05-07T08:30:00Z"
+                  session_expires_at: "2025-05-14T02:54:00Z"
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
@@ -779,10 +830,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Authenticated user not found"
+                errors: ["Authenticated user not found"]
     post:
       summary: Create or update a subscription
-      description: "Creates or updates the user's subscription. For web clients, initiates a Stripe Checkout session for paid plans (gold, platinum) and returns a checkout URL; for basic plan, creates a free subscription immediately. For mobile clients (React Native), include 'X-Client-Type: mobile' header to initiate a Stripe Payment Intent for paid plans, returning a client_secret for use with Stripe React Native SDK, then call POST /api/v1/subscriptions/confirm_payment to confirm payment. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
+      description: "Creates or updates the user's subscription. For web clients, initiates a Stripe Checkout session for paid plans (gold, platinum) and returns a checkout URL; for basic plan, activates the subscription immediately. For mobile clients (React Native), include 'X-Client-Type: mobile' header to initiate a Stripe Payment Intent for paid plans, returning a client_secret for use with Stripe React Native SDK, then call POST /api/v1/subscriptions/confirm_payment to confirm payment. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
       tags:
         - Subscriptions
       security:
@@ -815,18 +866,6 @@ paths:
             application/json:
               schema:
                 oneOf:
-                  - type: object
-                    properties:
-                      message:
-                        type: string
-                        example: "Free basic subscription created"
-                      subscription_id:
-                        type: integer
-                        example: 1
-                    required:
-                      - message
-                      - subscription_id
-                    description: "Response for free basic subscription (both web and mobile clients)"
                   - type: object
                     properties:
                       checkout_url:
@@ -871,11 +910,6 @@ paths:
                       - currency
                     description: "Response for paid plans (gold, platinum) for mobile clients (X-Client-Type: mobile)"
               examples:
-                basic_subscription:
-                  summary: Basic subscription (web or mobile)
-                  value:
-                    message: "Free basic subscription created"
-                    subscription_id: 1
                 web_paid_subscription:
                   summary: Paid subscription for web client
                   value:
@@ -897,7 +931,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Authenticated user not found"
+                errors: ["Authenticated user not found"]
         '422':
           description: "Subscription creation or update failed"
           content:
@@ -905,7 +939,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Invalid plan: diamond"
+                errors: ["Invalid plan. Must be one of: basic, gold, platinum"]
   /api/v1/subscriptions/success:
     get:
       summary: Handle successful subscription payment
@@ -949,7 +983,7 @@ paths:
                 message: "Subscription completed successfully"
                 subscription_id: 1
                 plan: "platinum"
-                redirect_url: "https://movieexplorerplus.netlify.app/subscription-success?session_id=cs_test_...&plan=platinum"
+                redirect_url: "https://movieexplorerplus.netlify.app/subscription-success?session_id=cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD&plan=platinum"
         '400':
           description: "Invalid session ID (likely accessed directly)"
           content:
@@ -981,7 +1015,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Subscription not found or already processed"
+                errors: ["Subscription not found or already processed"]
         '422':
           description: "Failed to complete subscription"
           content:
@@ -989,8 +1023,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Invalid or inaccessible session ID"
-                details: "No such checkout.session: cs_test_invalid"
+                errors: ["Failed to complete subscription: No such checkout.session: cs_test_invalid"]
   /api/v1/subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
@@ -1023,7 +1056,7 @@ paths:
                   - redirect_url
               example:
                 message: "Subscription cancelled successfully"
-                redirect_url: "https://movieexplorerplus.netlify.app/subscription-cancel?session_id=cs_test_..."
+                redirect_url: "https://movieexplorerplus.netlify.app/subscription-cancel?session_id=cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
         '400':
           description: "Invalid session ID (likely accessed directly)"
           content:
@@ -1051,7 +1084,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Subscription not found or already processed"
+                errors: ["Subscription not found or already processed"]
         '422':
           description: "Failed to cancel subscription"
           content:
@@ -1059,7 +1092,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Invalid session ID"
+                errors: ["Invalid session ID"]
   /api/v1/subscriptions/confirm_payment:
     post:
       summary: Confirm subscription payment (mobile clients only)
@@ -1118,7 +1151,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Authenticated user not found"
+                errors: ["Authenticated user not found"]
         '404':
           description: "Subscription not found"
           content:
@@ -1126,7 +1159,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Subscription not found or already processed"
+                errors: ["Subscription not found or already processed"]
         '422':
           description: "Failed to confirm subscription"
           content:
@@ -1134,8 +1167,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Failed to complete subscription"
-                details: "Payment not completed"
+                errors: ["Failed to complete subscription: Payment not completed"]
   /api/v1/subscriptions/check_status:
     get:
       summary: Check subscription status
@@ -1151,6 +1183,16 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Subscription'
+              example:
+                id: 1
+                user_id: 1
+                plan: "platinum"
+                status: "active"
+                created_at: "2025-05-14T02:24:00Z"
+                updated_at: "2025-05-14T02:24:00Z"
+                expiry_date: "2025-06-14T02:24:00Z"
+                session_id: null
+                session_expires_at: null
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
@@ -1158,7 +1200,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Authenticated user not found"
+                errors: ["Authenticated user not found"]
         '404':
           description: "Subscription not found"
           content:
@@ -1166,7 +1208,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                error: "Subscription not found"
+                errors: ["Subscription not found"]
 servers:
   - url: http://localhost:3000
     description: "Development server"
