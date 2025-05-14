@@ -14,7 +14,7 @@ module Api
           current_page: movies.current_page
         }, status: :ok
       rescue StandardError
-        render json: { error: "Internal server error" }, status: :internal_server_error
+        render json: { errors: ["Internal server error"] }, status: :internal_server_error
       end
 
       def create
@@ -23,23 +23,23 @@ module Api
           result[:movie].send_new_movie_notification
           render json: result[:movie].as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :created
         else
-          render json: { error: result[:errors] }, status: :unprocessable_entity
+          render json: { errors: result[:errors] }, status: :unprocessable_entity
         end
       rescue StandardError => e
-        render json: { error: "Internal server error" }, status: :internal_server_error
+        render json: { errors: ["Internal server error: #{e.message}"] }, status: :internal_server_error
       end
 
       def all
         movies = Movie.all
         render json: { movies: movies.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]) }, status: :ok
       rescue StandardError
-        render json: { error: "Internal server error" }, status: :internal_server_error
+        render json: { errors: ["Internal server error"] }, status: :internal_server_error
       end
 
       def show
         render json: @movie.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :ok
       rescue StandardError
-        render json: { error: "Internal server error" }, status: :internal_server_error
+        render json: { errors: ["Internal server error"] }, status: :internal_server_error
       end
 
       def update
@@ -47,24 +47,25 @@ module Api
         if result[:success]
           render json: result[:movie].as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :ok
         else
-          render json: { error: result[:errors] }, status: :unprocessable_entity
+          render json: { errors: result[:errors] }, status: :unprocessable_entity
         end
       rescue StandardError
-        render json: { error: "Internal server error" }, status: :internal_server_error
+        render json: { errors: ["Internal server error"] }, status: :internal_server_error
       end
 
       def destroy
         @movie.destroy
         render json: { message: "Movie deleted successfully" }, status: :ok
       rescue StandardError
-        render json: { error: "Internal server error" }, status: :internal_server_error
+        render json: { errors: ["Internal server error"] }, status: :internal_server_error
       end
 
       private
+
       def set_movie
         @movie = Movie.find(params[:id])
       rescue ActiveRecord::RecordNotFound
-        render json: { error: "Movie not found" }, status: :not_found
+        render json: { errors: ["Movie not found"] }, status: :not_found
       end
 
       def movie_params

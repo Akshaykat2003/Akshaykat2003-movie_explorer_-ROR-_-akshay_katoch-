@@ -28,6 +28,11 @@ class Api::V1::SubscriptionsController < ApplicationController
           amount: result[:amount], 
           currency: result[:currency] 
         }, status: :created
+      elsif plan == 'basic'
+        render json: {
+          message: 'Basic subscription created successfully',
+          subscription_id: subscription.id
+        }, status: :created
       else
         render json: {
           checkout_url: result[:session].url,

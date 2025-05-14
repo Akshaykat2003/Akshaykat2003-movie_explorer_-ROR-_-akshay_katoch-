@@ -1,4 +1,3 @@
-# spec/factories/users.rb
 FactoryBot.define do
   factory :user do
     first_name { Faker::Name.first_name }
@@ -6,7 +5,7 @@ FactoryBot.define do
     email { Faker::Internet.unique.email }
     mobile_number { Faker::Number.number(digits: 10).to_s }
     role { 'user' }
-    password { 'password123' }
+    password { 'Password123' } # Ensure this matches the test
 
     trait :supervisor do
       role { 'supervisor' }
@@ -17,7 +16,6 @@ FactoryBot.define do
     end
   end
 
-  # Define admin_user factory for ActiveAdmin
   factory :admin_user, class: 'AdminUser' do
     email { Faker::Internet.unique.email }
     password { 'password123' }

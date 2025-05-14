@@ -509,8 +509,6 @@ paths:
                 - release_year
                 - rating
                 - plan
-                - poster
-                - banner
       responses:
         '201':
           description: "Movie created successfully"
