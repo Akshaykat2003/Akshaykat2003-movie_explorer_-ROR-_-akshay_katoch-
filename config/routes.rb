@@ -15,15 +15,15 @@ Rails.application.routes.draw do
       get    'movies/all',   to: 'movies#all'
       get    'movies/:id',   to: 'movies#show'
       post   'movies',       to: 'movies#create'
-      patch  'movies/:id',   to: 'movies#update'
-      put    'movies/:id',   to: 'movies#update'
+      patch  'movies/:id',   to: 'movies#update'  
       delete 'movies/:id',   to: 'movies#destroy'
 
-      get    'subscriptions',                  to: 'subscriptions#index' 
+      get    'subscriptions',                  to: 'subscriptions#index'
       post   'subscriptions',                  to: 'subscriptions#create'
       get    'subscriptions/success',          to: 'subscriptions#success'
       get    'subscriptions/cancel',           to: 'subscriptions#cancel'
-      get    'subscriptions/:id/check_status', to: 'subscriptions#check_subscription_status'
+      get    'subscriptions/check_status', to: 'subscriptions#check_subscription_status'
+      post   'subscriptions/confirm_payment',  to: 'subscriptions#confirm_payment'
     end
   end
 

@@ -1,6 +1,7 @@
 module Api
   module V1
     class MoviesController < ApplicationController
+      skip_before_action :verify_authenticity_token
       before_action :set_movie, only: [:show, :update, :destroy]
       before_action :authorize_supervisor_or_admin, only: [:create, :update, :destroy]
       skip_before_action :authenticate_request, only: [:index, :show, :all]
@@ -16,6 +17,18 @@ module Api
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
 
+      def create
+        result = Movie.create_movie(movie_params)
+        if result[:success]
+          result[:movie].send_new_movie_notification
+          render json: result[:movie].as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :created
+        else
+          render json: { error: result[:errors] }, status: :unprocessable_entity
+        end
+      rescue StandardError => e
+        render json: { error: "Internal server error" }, status: :internal_server_error
+      end
+
       def all
         movies = Movie.all
         render json: { movies: movies.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]) }, status: :ok
@@ -25,18 +38,6 @@ module Api
 
       def show
         render json: @movie.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :ok
-      rescue StandardError
-        render json: { error: "Internal server error" }, status: :internal_server_error
-      end
-
-      def create
-        result = Movie.create_movie(movie_params)
-        if result[:success]
-          result[:movie].send_new_movie_notification
-          render json: result[:movie].as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :created
-        else
-          render json: { error: result[:errors] }, status: :unprocessable_entity
-        end
       rescue StandardError
         render json: { error: "Internal server error" }, status: :internal_server_error
       end
@@ -60,7 +61,6 @@ module Api
       end
 
       private
-
       def set_movie
         @movie = Movie.find(params[:id])
       rescue ActiveRecord::RecordNotFound
@@ -69,10 +69,6 @@ module Api
 
       def movie_params
         params.permit(:title, :genre, :release_year, :rating, :director, :duration, :description, :plan, :poster, :banner)
-      end
-
-      def authorize_supervisor_or_admin
-        render json: { error: "Forbidden: You do not have permission to perform this action" }, status: :forbidden unless @current_user&.role&.in?(%w[supervisor admin])
       end
     end
   end

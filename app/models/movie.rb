@@ -49,15 +49,26 @@ class Movie < ApplicationRecord
   end
 
   def send_new_movie_notification
-    tokens = User.where(notifications_enabled: true).where.not(device_token: nil).pluck(:device_token)
+    tokens = fetch_notification_tokens
     return if tokens.empty?
 
-    FcmService.new.send_notification(
-      tokens,
-      "New Movie Added!",
-      "#{title} has been added to Movie Explorer+.",
-      movie_id: id.to_s,
-      url: "/movies/#{id}"
-    )
+    send_fcm_notification(tokens)
+  end
+
+  private
+
+
+  def fetch_notification_tokens
+    User.where(notifications_enabled: true).where.not(device_token: nil).pluck(:device_token)
+  end
+
+
+  def send_fcm_notification(tokens)
+    title = "New Movie Added!"
+    body = "#{title} has been added to Movie Explorer+."
+    data = { movie_id: id.to_s, url: "/movies/#{id}" }
+
+    fcm_service = FcmService.new
+    fcm_service.send_notification(tokens, title, body, data)
   end
 end

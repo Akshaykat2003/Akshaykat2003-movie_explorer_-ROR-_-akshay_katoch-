@@ -30,21 +30,17 @@ class Api::V1::UsersController < ApplicationController
   end
 
   def update_preferences
-    render json: { errors: ["Authentication required"] }, status: :unauthorized unless current_user
-    update_params = params.permit(:device_token, :notifications_enabled).to_h
-    update_params[:notifications_enabled] = update_params[:notifications_enabled] != false if update_params.key?(:notifications_enabled)
-    update_params.delete(:device_token) if update_params[:device_token] && current_user.device_token == update_params[:device_token]
-    if update_params.empty?
-      render json: { message: "Preferences unchanged" }, status: :ok
-    elsif current_user.update(update_params)
-      render json: { message: "Preferences updated successfully" }, status: :ok
-    else
-      render json: { errors: current_user.errors.full_messages }, status: :unprocessable_entity
+    unless current_user
+      render json: { errors: ["Authentication required"] }, status: :unauthorized
+      return
     end
-  rescue ActiveRecord::RecordNotUnique
-    render json: { errors: ["Device token is already in use by another user"] }, status: :unprocessable_entity
-  rescue StandardError
-    render json: { errors: ["Internal server error"] }, status: :internal_server_error
+    update_params = params.permit(:device_token, :notifications_enabled)
+    result = User.update_preferences(current_user, update_params)
+    if result[:success]
+      render json: { message: result[:message], user: result[:user]&.as_json_with_plan }, status: :ok
+    else
+      render json: { errors: result[:errors] }, status: :unprocessable_entity
+    end
   end
 
   def logout
