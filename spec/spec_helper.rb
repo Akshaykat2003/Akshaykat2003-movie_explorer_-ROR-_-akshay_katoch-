@@ -5,12 +5,14 @@ require 'simplecov'
 SimpleCov.start do
   add_filter '/spec/'      # Ignore the spec directory
   add_filter '/config/'    # Ignore the config directory
-  add_filter '/vendor/'    # Ignore vendor directory (e.g., bundled gems)
+  add_filter '/vendor/'
+  add_filter '/app/admin/' 
+  add_filter  'app/services/'
+  add_filter '/app/helpers/'   # Ignore vendor directory (e.g., bundled gems)
 
   # Optional: Group your files for better reporting
   add_group 'Controllers', 'app/controllers'
   add_group 'Models', 'app/models'
-  add_group 'Services', 'app/services'
 
 
 end
