@@ -98,6 +98,9 @@ class Subscription < ApplicationRecord
   def pending?
     status == 'pending'
   end
+  def checkout_session?
+    session_id.present? && session_id.start_with?('cs_')
+  end
 
   private
 
