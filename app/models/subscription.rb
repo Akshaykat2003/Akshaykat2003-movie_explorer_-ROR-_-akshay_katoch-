@@ -35,7 +35,7 @@ class Subscription < ApplicationRecord
   validates :plan, :status, presence: true
   validates :plan, inclusion: { in: %w[basic gold platinum], message: 'is not a valid plan' }
   validates :status, inclusion: { in: %w[pending active inactive cancelled], message: 'is not a valid status' }
-  validates :session_expires_at, presence: true, if: -> { pending? }
+  validates :session_expires_at, presence: true, if: -> { pending? && checkout_session?}
   validates :expiry_date, presence: true, unless: -> { basic? }
 
   before_validation :set_default_status, on: :create
