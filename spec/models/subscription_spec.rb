@@ -21,8 +21,8 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'is not valid with an invalid plan' do
-      subscription = build(:subscription, plan: nil) 
-      subscription.assign_attributes(plan: 'invalid') 
+      subscription = build(:subscription, plan: nil)
+      subscription.assign_attributes(plan: 'invalid')
       expect(subscription).not_to be_valid
       expect(subscription.errors[:plan]).to include('is not a valid plan')
     end
@@ -34,8 +34,8 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'is not valid with an invalid status' do
-      subscription = build(:subscription, status: nil) 
-      subscription.assign_attributes(status: 'invalid') 
+      subscription = build(:subscription, status: nil)
+      subscription.assign_attributes(status: 'invalid')
       expect(subscription).not_to be_valid
       expect(subscription.errors[:status]).to include('is not a valid status')
     end
@@ -70,12 +70,12 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'returns true for a gold plan past expiry' do
-      subscription = create(:subscription, :gold, session_expires_at: 30.minutes.from_now, expiry_date: Time.current - 1.day)
+      subscription = create(:subscription, :gold, status: 'pending', session_id: 'cs_test_123', session_expires_at: 30.minutes.from_now, expiry_date: Time.current - 1.day)
       expect(subscription.expired?).to be true
     end
 
     it 'returns false for a gold plan not yet expired' do
-      subscription = create(:subscription, :gold, session_expires_at: 30.minutes.from_now, expiry_date: Time.current + 1.day)
+      subscription = create(:subscription, :gold, status: 'pending', session_id: 'cs_test_123', session_expires_at: 30.minutes.from_now, expiry_date: Time.current + 1.day)
       expect(subscription.expired?).to be false
     end
   end
@@ -87,7 +87,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'downgrades to basic if expired and returns true' do
-      subscription = create(:subscription, :gold, status: 'active', expiry_date: Time.current - 1.day)
+      subscription = create(:subscription, :gold, status: 'active', session_id: 'cs_test_123', session_expires_at: 1.hour.from_now, expiry_date: Time.current - 1.day)
       expect(subscription.active?).to be true
       expect(subscription.reload.plan).to eq('basic')
       expect(subscription.status).to eq('active')
@@ -97,7 +97,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'returns true for an active gold plan not yet expired' do
-      subscription = create(:subscription, :gold, status: 'active', expiry_date: Time.current + 1.day)
+      subscription = create(:subscription, :gold, status: 'active', session_id: 'cs_test_123', session_expires_at: 1.hour.from_now, expiry_date: Time.current + 1.day)
       expect(subscription.active?).to be true
     end
   end
@@ -110,7 +110,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'downgrades to basic if expired' do
-      subscription = create(:subscription, :gold, status: 'active', expiry_date: Time.current - 1.day)
+      subscription = create(:subscription, :gold, status: 'active', session_id: 'cs_test_123', session_expires_at: 1.hour.from_now, expiry_date: Time.current - 1.day)
       subscription.check_and_deactivate_if_expired
       expect(subscription.reload.plan).to eq('basic')
       expect(subscription.status).to eq('active')
@@ -120,7 +120,7 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'does nothing if not expired' do
-      subscription = create(:subscription, :gold, status: 'active', expiry_date: Time.current + 1.day)
+      subscription = create(:subscription, :gold, status: 'active', session_id: 'cs_test_123', session_expires_at: 1.hour.from_now, expiry_date: Time.current + 1.day)
       subscription.check_and_deactivate_if_expired
       expect(subscription.reload.plan).to eq('gold')
       expect(subscription.status).to eq('active')
