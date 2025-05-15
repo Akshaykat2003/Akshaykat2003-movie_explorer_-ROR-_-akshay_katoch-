@@ -1,4 +1,3 @@
-# spec/models/subscription_spec.rb
 require 'rails_helper'
 
 RSpec.describe Subscription, type: :model do
@@ -22,8 +21,8 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'is not valid with an invalid plan' do
-      subscription = build(:subscription, plan: nil) # Reset plan to nil to trigger validation
-      subscription.assign_attributes(plan: 'invalid') # Use assign_attributes to avoid ArgumentError
+      subscription = build(:subscription, plan: nil) 
+      subscription.assign_attributes(plan: 'invalid') 
       expect(subscription).not_to be_valid
       expect(subscription.errors[:plan]).to include('is not a valid plan')
     end
@@ -35,16 +34,32 @@ RSpec.describe Subscription, type: :model do
     end
 
     it 'is not valid with an invalid status' do
-      subscription = build(:subscription, status: nil) # Reset status to nil to trigger validation
-      subscription.assign_attributes(status: 'invalid') # Use assign_attributes to avoid ArgumentError
+      subscription = build(:subscription, status: nil) 
+      subscription.assign_attributes(status: 'invalid') 
       expect(subscription).not_to be_valid
       expect(subscription.errors[:status]).to include('is not a valid status')
     end
 
-    it 'is not valid without session_expires_at if pending' do
-      subscription = build(:subscription, :gold, session_expires_at: nil)
-      expect(subscription).not_to be_valid
-      expect(subscription.errors[:session_expires_at]).to include("can't be blank")
+    context 'when status is pending' do
+      context 'with a checkout session (web client)' do
+        it 'is not valid without session_expires_at' do
+          subscription = build(:subscription, :gold, status: 'pending', session_id: 'cs_test_123', session_expires_at: nil)
+          expect(subscription).not_to be_valid
+          expect(subscription.errors[:session_expires_at]).to include("can't be blank")
+        end
+
+        it 'is valid with session_expires_at' do
+          subscription = build(:subscription, :gold, status: 'pending', session_id: 'cs_test_123', session_expires_at: 1.hour.from_now)
+          expect(subscription).to be_valid
+        end
+      end
+
+      context 'with a payment intent (mobile client)' do
+        it 'is valid without session_expires_at' do
+          subscription = build(:subscription, :gold, status: 'pending', session_id: 'pi_test_123', session_expires_at: nil)
+          expect(subscription).to be_valid
+        end
+      end
     end
   end
 
