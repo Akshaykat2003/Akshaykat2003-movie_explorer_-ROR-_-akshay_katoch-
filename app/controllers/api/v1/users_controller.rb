@@ -25,7 +25,7 @@ class Api::V1::UsersController < ApplicationController
       token = user.generate_jwt
       render json: { token: token, user: user.as_json_with_plan }, status: :ok
     else
-      render json: { error: "Invalid email or password" }, status: :unauthorized
+      render json: { errors: ["Invalid email or password"] }, status: :unauthorized
     end
   end
 
@@ -49,8 +49,8 @@ class Api::V1::UsersController < ApplicationController
     if result[:success]
       render json: { message: result[:message] }, status: :ok
     else
-      status = result[:error] == 'Authorization header missing' ? :unauthorized : :unprocessable_entity
-      render json: { error: result[:error] }, status: status
+      status = result[:error] == 'Token is missing' ? :unauthorized : :unprocessable_entity
+      render json: { errors: [result[:error]] }, status: status
     end
   end
 

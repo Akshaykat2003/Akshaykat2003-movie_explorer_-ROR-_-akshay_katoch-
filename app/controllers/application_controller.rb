@@ -7,21 +7,21 @@ class ApplicationController < ActionController::Base
     header = request.headers['Authorization']
     token = header&.split(/\s+/)&.last
     unless token
-      render json: { error: 'Unauthorized: Missing token' }, status: :unauthorized
+      render json: { errors: ["Unauthorized: Missing token"] }, status: :unauthorized
       return
     end
 
     begin
-      decoded = JWT.decode(token, Rails.application.secrets.secret_key_base, true, { algorithm: 'HS256' })[0]
+      decoded = JWT.decode(token, Rails.application.credentials.secret_key_base, true, { algorithm: 'HS256' })[0]
       @current_user = User.find(decoded['user_id'])
     rescue JWT::DecodeError => e
-      render json: { error: "Unauthorized: Invalid token - #{e.message}" }, status: :unauthorized
+      render json: { errors: ["Unauthorized: Invalid token - #{e.message}"] }, status: :unauthorized
       return
     rescue ActiveRecord::RecordNotFound
-      render json: { error: 'Unauthorized: User not found' }, status: :unauthorized
+      render json: { errors: ["Unauthorized: User not found"] }, status: :unauthorized
       return
     rescue StandardError
-      render json: { error: 'Internal server error' }, status: :internal_server_error
+      render json: { errors: ["Internal server error"] }, status: :internal_server_error
       return
     end
   end
@@ -42,7 +42,7 @@ class ApplicationController < ActionController::Base
     return if active_admin_controller?
 
     unless @current_user&.role&.in?(%w[supervisor admin])
-      render json: { error: 'Forbidden: You do not have permission to perform this action' }, status: :forbidden
+      render json: { errors: ["Forbidden: You do not have permission to perform this action"] }, status: :forbidden
     end
   end
 

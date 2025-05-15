@@ -18,27 +18,31 @@ ActiveAdmin.register Movie do
   filter :plan, as: :select, collection: Movie.plans.keys.map { |plan| [plan.capitalize, plan] }
 
   index do
-    selectable_column
-    id_column
-    column :title
-    column :genre
-    column :release_year
-    column :rating
-    column :director
-    column :duration
-    column :description
-    column :plan
-    column :poster do |movie|
-      image_tag movie.poster.url, size: '50x50' if movie.poster.attached?
+  selectable_column
+  id_column
+  column :title
+  column :genre
+  column :release_year
+  column :rating
+  column :director
+  column :duration
+  column :plan
+  column :poster do |movie|
+    if movie.poster.attached?
+      image_tag movie.poster.url, style: 'border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); width: 60px; height: 60px; object-fit: cover;'
     end
-    column :banner do |movie|
-      image_tag movie.banner.url, size: '50x50' if movie.banner.attached?
-    end
-    column "API Access" do
-      link_to "Fetch All Movies", "/api/v1/movies/all", target: "_blank"
-    end
-    actions
   end
+  column :banner do |movie|
+    if movie.banner.attached?
+      image_tag movie.banner.url, style: 'border-radius: 5px; width: 60px; height: 60px; object-fit: cover;'
+    end
+  end
+  column "📡 API Access" do
+    link_to "🎥 Fetch All Movies", "/api/v1/movies/all", target: "_blank", style: "color: #1e88e5;"
+  end
+  actions
+end
+
 
   show do
     attributes_table do

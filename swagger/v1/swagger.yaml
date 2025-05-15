@@ -9,7 +9,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: "JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /api/v1/login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues."
+      description: "JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues."
   schemas:
     User:
       type: object
@@ -163,7 +163,7 @@ components:
       required:
         - errors
 paths:
-  /api/v1/signup:
+  /signup:
     post:
       summary: Signup user
       tags:
@@ -233,7 +233,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Email has already been taken"]
-  /api/v1/login:
+  /login:
     post:
       summary: Login user
       description: "Logs in a user and returns a JWT token for authentication. Use this token in the 'Authorize' button (top-right) as 'Bearer <token>' to authenticate subsequent requests. Ensure there is a space between 'Bearer' and the token. Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues."
@@ -289,7 +289,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Invalid email or password"]
-  /api/v1/logout:
+  /logout:
     post:
       summary: Logout user
       tags:
@@ -325,10 +325,10 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Invalid token"]
-  /api/v1/update_preferences:
+  /update_preferences:
     post:
       summary: Update user preferences
-      description: "Updates the user's notification preferences and/or device token for push notifications. Use this to enable/disable notifications or register a new device token. Requires a valid JWT token. First, use /api/v1/login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'."
+      description: "Updates the user's notification preferences and/or device token for push notifications. Use this to enable/disable notifications or register a new device token. Requires a valid JWT token. First, use /login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Users
       security:
@@ -390,7 +390,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Device token is already in use by another user"]
-  /api/v1/movies:
+  /movies:
     get:
       summary: List movies
       description: "Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre. No authentication is required, but a JWT token can be provided to identify the user."
@@ -458,7 +458,7 @@ paths:
                 errors: ["Internal server error"]
     post:
       summary: Create a movie
-      description: "Creates a new movie. Requires supervisor role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
+      description: "Creates a new movie. Requires supervisor role. Authenticate using the JWT token obtained from /login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -509,8 +509,6 @@ paths:
                 - release_year
                 - rating
                 - plan
-                - poster
-                - banner
       responses:
         '201':
           description: "Movie created successfully"
@@ -554,7 +552,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Internal server error"]
-  /api/v1/movies/all:
+  /movies/all:
     get:
       summary: List all movies without pagination or filters
       description: "Retrieves all movies, regardless of the user's subscription plan, without pagination or filters. No authentication is required, but a JWT token can be provided to identify the user."
@@ -593,7 +591,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Internal server error"]
-  /api/v1/movies/{id}:
+  /movies/{id}:
     get:
       summary: Show a movie
       description: "Retrieves the details of a specific movie. No authentication is required, and any user can view the details of any movie, regardless of their subscription plan."
@@ -642,7 +640,7 @@ paths:
                 errors: ["Internal server error"]
     patch:
       summary: Update a movie
-      description: "Updates an existing movie. Requires supervisor role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
+      description: "Updates an existing movie. Requires supervisor role. Authenticate using the JWT token obtained from /login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -746,7 +744,7 @@ paths:
                 errors: ["Internal server error"]
     delete:
       summary: Delete a movie
-      description: "Deletes a movie. Requires supervisor role. Authenticate using the JWT token obtained from /api/v1/login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
+      description: "Deletes a movie. Requires supervisor role. Authenticate using the JWT token obtained from /login. Enter the token in the 'Authorize' button (top-right) as 'Bearer <token>'."
       tags:
         - Movies
       security:
@@ -792,48 +790,10 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Internal server error"]
-  /api/v1/subscriptions:
-    get:
-      summary: Get user's subscription
-      description: "Retrieves the authenticated user's subscription. Returns a single subscription object or null if the user has no subscription. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
-      tags:
-        - Subscriptions
-      security:
-        - BearerAuth: []
-      responses:
-        '200':
-          description: "Subscription retrieved successfully"
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  subscriptions:
-                    $ref: '#/components/schemas/Subscription'
-                    nullable: true
-                    description: "The user's subscription, or null if no subscription exists."
-              example:
-                subscriptions:
-                  id: 1
-                  user_id: 1
-                  plan: "platinum"
-                  status: "active"
-                  created_at: "2025-05-14T02:24:00Z"
-                  updated_at: "2025-05-14T02:24:00Z"
-                  expiry_date: "2025-06-14T02:24:00Z"
-                  session_id: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
-                  session_expires_at: "2025-05-14T02:54:00Z"
-        '401':
-          description: "Unauthorized (missing or invalid token)"
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
-              example:
-                errors: ["Authenticated user not found"]
+  /subscriptions:
     post:
       summary: Create or update a subscription
-      description: "Creates or updates the user's subscription. For web clients, initiates a Stripe Checkout session for paid plans (gold, platinum) and returns a checkout URL; for basic plan, activates the subscription immediately. For mobile clients (React Native), include 'X-Client-Type: mobile' header to initiate a Stripe Payment Intent for paid plans, returning a client_secret for use with Stripe React Native SDK, then call POST /api/v1/subscriptions/confirm_payment to confirm payment. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
+      description: "Creates or updates the user's subscription. For web clients, initiates a Stripe Checkout session for paid plans (gold, platinum) and returns a checkout URL; for basic plan, activates the subscription immediately. For mobile clients (React Native), include 'X-Client-Type: mobile' header to initiate a Stripe Payment Intent for paid plans, returning a client_secret for use with Stripe React Native SDK, then call POST /subscriptions/confirm_payment to confirm payment. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
       tags:
         - Subscriptions
       security:
@@ -940,7 +900,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Invalid plan. Must be one of: basic, gold, platinum"]
-  /api/v1/subscriptions/success:
+  /subscriptions/success:
     get:
       summary: Handle successful subscription payment
       description: "Called by the frontend after a successful payment to complete the subscription. Updates the subscription status to active and sets the expiry date based on the Stripe subscription. No authentication is required as this is a Stripe redirect endpoint, but a JWT token can be provided if the user is logged in."
@@ -999,7 +959,7 @@ paths:
                     example: "This endpoint should be accessed via Stripe redirect after payment."
                   instructions:
                     type: string
-                    example: "Call POST /api/v1/subscriptions to get a checkout_url, then redirect to that URL to complete payment."
+                    example: "Call POST /subscriptions to get a checkout_url, then redirect to that URL to complete payment."
                   redirect_url:
                     type: string
                     example: "https://movieexplorerplus.netlify.app"
@@ -1024,7 +984,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Failed to complete subscription: No such checkout.session: cs_test_invalid"]
-  /api/v1/subscriptions/cancel:
+  /subscriptions/cancel:
     get:
       summary: Handle subscription cancellation
       description: "Called by the frontend after a cancelled payment to mark the subscription as cancelled. No authentication is required as this is a Stripe redirect endpoint."
@@ -1093,7 +1053,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Invalid session ID"]
-  /api/v1/subscriptions/confirm_payment:
+  /subscriptions/confirm_payment:
     post:
       summary: Confirm subscription payment (mobile clients only)
       description: "Confirms a subscription payment for mobile clients (React Native) after collecting payment details using the Stripe React Native SDK. Updates the subscription status to active and sets the expiry date based on the Stripe Payment Intent. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
@@ -1110,11 +1070,11 @@ paths:
                 payment_intent_id:
                   type: string
                   example: "pi_xxx"
-                  description: "The Stripe Payment Intent ID, extracted from the client_secret provided by the POST /api/v1/subscriptions endpoint."
+                  description: "The Stripe Payment Intent ID, extracted from the client_secret provided by the POST /subscriptions endpoint."
                 subscription_id:
                   type: integer
                   example: 1
-                  description: "The ID of the subscription to confirm, provided by the POST /api/v1/subscriptions endpoint."
+                  description: "The ID of the subscription to confirm, provided by the POST /subscriptions endpoint."
               required:
                 - payment_intent_id
                 - subscription_id
@@ -1168,7 +1128,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Failed to complete subscription: Payment not completed"]
-  /api/v1/subscriptions/check_status:
+  /subscriptions/check_status:
     get:
       summary: Check subscription status
       description: "Retrieves the status of the authenticated user's subscription. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
@@ -1210,7 +1170,7 @@ paths:
               example:
                 errors: ["Subscription not found"]
 servers:
-  - url: http://localhost:3000
+  - url: http://localhost:3000/api/v1
     description: "Development server"
-  - url: https://movie-explorer-rorakshaykat2003-movie.onrender.com
+  - url: https://movie-explorer-rorakshaykat2003-movie.onrender.com/api/v1
     description: "Production server"

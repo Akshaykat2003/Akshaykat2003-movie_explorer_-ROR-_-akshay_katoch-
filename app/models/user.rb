@@ -36,7 +36,6 @@ class User < ApplicationRecord
     update_params[:notifications_enabled] = update_params[:notifications_enabled] != false if update_params.key?(:notifications_enabled)
     update_params.delete(:device_token) if update_params[:device_token] && user.device_token == update_params[:device_token]
     if update_params.empty?
-      Rails.logger.info("No changes to apply for user preferences: user_id=#{user.id}")
       return { success: true, message: "Preferences unchanged" }
     end
     if user.update(update_params)
