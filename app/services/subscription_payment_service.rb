@@ -23,12 +23,11 @@ class SubscriptionPaymentService
     currency = price.currency 
 
     expiry_date = case plan
-                  when 'gold' then Time.current + 1.minute
+                  when 'gold' then Time.current + 2.minute
                   when 'platinum' then Time.current + 1.month
                   end
 
     if is_mobile
-   
       payment_intent = Stripe::PaymentIntent.create(
         customer: customer.id,
         amount: amount,
