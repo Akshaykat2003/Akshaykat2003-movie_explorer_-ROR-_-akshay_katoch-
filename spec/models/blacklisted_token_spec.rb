@@ -1,68 +1,33 @@
-# require 'rails_helper'
+# app/models/blacklisted_token.rb
+class BlacklistedToken < ApplicationRecord
+  validates :token, presence: true, uniqueness: true
+  validates :expires_at, presence: true
 
-# RSpec.describe BlacklistedToken, type: :model do
-#   describe 'validations' do
-#     it { should validate_presence_of(:token) }
-#     it { should validate_presence_of(:expires_at) }
-#     it { should validate_uniqueness_of(:token) }
-#   end
+  def self.blacklisted?(token)
+    return false unless token.is_a?(String)
+    where(token: token).exists?
+  end
 
-#   describe '.blacklisted?' do
-#     it 'returns true if the token is blacklisted' do
-#       BlacklistedToken.create!(token: 'test_token', expires_at: 1.day.from_now)
-#       expect(BlacklistedToken.blacklisted?('test_token')).to be true
-#     end
+  def self.cleanup_expired
+    where('expires_at < ?', Time.current).destroy_all
+  end
 
-#     it 'returns false if the token is not blacklisted' do
-#       expect(BlacklistedToken.blacklisted?('unknown_token')).to be false
-#     end
-#   end
+  def self.blacklist(token, secret_key_base)
+    return { success: false, error: 'Token is missing' } if token.blank?
 
-#   describe '.cleanup_expired' do
-#     it 'deletes expired tokens' do
-#       BlacklistedToken.create!(token: 'expired_token', expires_at: 1.day.ago)
-#       BlacklistedToken.create!(token: 'valid_token', expires_at: 1.day.from_now)
-#       expect { BlacklistedToken.cleanup_expired }.to change { BlacklistedToken.count }.by(-1)
-#       expect(BlacklistedToken.exists?(token: 'expired_token')).to be false
-#       expect(BlacklistedToken.exists?(token: 'valid_token')).to be true
-#     end
-#   end
+    begin
+      decoded = JWT.decode(token, secret_key_base, true, algorithm: 'HS256').first
+      expires_at = Time.zone.at(decoded['exp'])
+      return { success: false, error: 'Token already expired' } if expires_at < Time.current
 
-#   describe '.blacklist' do
-#     let(:user) { create(:user) }
-#     let(:valid_token) { user.generate_jwt }
-#     let(:expired_token) { JWT.encode({ user_id: user.id, exp: 1.day.ago.to_i }, Rails.application.credentials.secret_key_base) }
-
-#     it 'blacklists a valid token successfully' do
-#       result = BlacklistedToken.blacklist(valid_token, Rails.application.credentials.secret_key_base)
-#       expect(result[:success]).to be true
-#       expect(result[:message]).to eq('Logout successful')
-#       expect(BlacklistedToken.exists?(token: valid_token)).to be true
-#     end
-
-#     it 'returns an error for a missing token' do
-#       result = BlacklistedToken.blacklist(nil, Rails.application.credentials.secret_key_base)
-#       expect(result[:success]).to be false
-#       expect(result[:error]).to eq('Token is missing')
-#     end
-
-#     it 'returns an error for an already expired token' do
-#       result = BlacklistedToken.blacklist(expired_token, Rails.application.credentials.secret_key_base)
-#       expect(result[:success]).to be false
-#       expect(result[:error]).to eq('Token already expired')
-#     end
-
-#     it 'returns an error for an invalid token' do
-#       result = BlacklistedToken.blacklist('invalid_token', Rails.application.credentials.secret_key_base)
-#       expect(result[:success]).to be false
-#       expect(result[:error]).to eq('Invalid token')
-#     end
-
-#     it 'returns an error if the token is already blacklisted' do
-#       BlacklistedToken.create!(token: valid_token, expires_at: 1.day.from_now)
-#       result = BlacklistedToken.blacklist(valid_token, Rails.application.credentials.secret_key_base)
-#       expect(result[:success]).to be false
-#       expect(result[:error]).to include('Token has already been taken')
-#     end
-#   end
-# end
+      create!(token: token, expires_at: expires_at)
+      { success: true, message: 'Logout successful' }
+    rescue JWT::ExpiredSignature
+      { success: false, error: 'Token already expired' }
+    rescue JWT::DecodeError
+      { success: false, error: 'Invalid token' }
+    rescue ActiveRecord::RecordInvalid => e
+      { success: false, error: e.message }
+    end
+  end
+end
