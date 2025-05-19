@@ -43,16 +43,17 @@ class Api::V1::UsersController < ApplicationController
     end
   end
 
-  def logout
-    token = request.headers['Authorization']&.split(' ')&.last
-    result = BlacklistedToken.blacklist(token, Rails.application.credentials.secret_key_base)
-    if result[:success]
-      render json: { message: result[:message] }, status: :ok
-    else
-      status = result[:error] == 'Token is missing' ? :unauthorized : :unprocessable_entity
-      render json: { errors: [result[:error]] }, status: status
-    end
+ def logout
+  token = request.headers['Authorization']&.split(' ')&.last
+  result = BlacklistedToken.blacklist(token, Rails.application.credentials.secret_key_base)
+  if result[:success]
+    current_user.update(device_token: nil) if current_user
+    render json: { message: result[:message] }, status: :ok
+  else
+    status = result[:error] == 'Token is missing' ? :unauthorized : :unprocessable_entity
+    render json: { errors: [result[:error]] }, status: status
   end
+end
 
   private
 
