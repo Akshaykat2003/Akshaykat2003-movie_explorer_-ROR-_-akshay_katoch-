@@ -29,7 +29,7 @@ class Api::V1::UsersController < ApplicationController
     end
   end
 
-  def update_preferences
+ def update_preferences
     unless current_user
       render json: { errors: ["Authentication required"] }, status: :unauthorized
       return
@@ -37,7 +37,11 @@ class Api::V1::UsersController < ApplicationController
     update_params = params.permit(:device_token, :notifications_enabled)
     result = User.update_preferences(current_user, update_params)
     if result[:success]
-      render json: { message: result[:message], user: result[:user]&.as_json_with_plan }, status: :ok
+      render json: {
+        message: result[:message],
+        device_token: result[:user]&.device_token,
+        notifications_enabled: result[:user]&.notifications_enabled
+      }, status: :ok
     else
       render json: { errors: result[:errors] }, status: :unprocessable_entity
     end

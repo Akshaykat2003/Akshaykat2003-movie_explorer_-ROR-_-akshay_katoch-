@@ -360,20 +360,22 @@ paths:
                   message:
                     type: string
                     example: "Preferences updated successfully"
-                  user:
-                    $ref: '#/components/schemas/User'
+                  device_token:
+                    type: string
+                    example: "fcm-device-token-here"
+                    nullable: true
+                    description: "FCM device token for push notifications, if set."
+                  notifications_enabled:
+                    type: boolean
+                    example: true
+                    nullable: true
+                    description: "Whether the user has enabled notifications."
+                required:
+                  - message
               example:
                 message: "Preferences updated successfully"
-                user:
-                  id: 1
-                  first_name: "Akshay"
-                  last_name: "Katoch"
-                  email: "akshaykatoch38@gmail.com"
-                  mobile_number: "9876543210"
-                  role: "user"
-                  active_plan: "basic"
-                  device_token: "fcm-device-token-here"
-                  notifications_enabled: true
+                device_token: "fcm-device-token-here"
+                notifications_enabled: true
         '401':
           description: "Unauthorized (invalid or missing JWT token)"
           content:
@@ -390,7 +392,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Device token is already in use by another user"]
-  /movies:
+  /moves:
     get:
       summary: List movies
       description: "Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre. No authentication is required, but a JWT token can be provided to identify the user."
