@@ -12,8 +12,8 @@ class ApplicationController < ActionController::Base
     end
 
    def self.blacklisted?(token)
-  return false unless token.is_a?(String) # Guard against non-string input
-  where(token: token).exists?
+    return false unless token.is_a?(String)
+    where(token: token).exists?
    end
 
     begin
