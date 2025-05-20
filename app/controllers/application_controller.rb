@@ -11,6 +11,11 @@ class ApplicationController < ActionController::Base
       return
     end
 
+   def self.blacklisted?(token)
+    return false unless token.is_a?(String)
+    where(token: token).exists?
+   end
+
     begin
       decoded = JWT.decode(token, Rails.application.credentials.secret_key_base, true, { algorithm: 'HS256' })[0]
       @current_user = User.find(decoded['user_id'])
@@ -49,4 +54,6 @@ class ApplicationController < ActionController::Base
   def active_admin_controller?
     controller_path.start_with?('admin/')
   end
+
+
 end
