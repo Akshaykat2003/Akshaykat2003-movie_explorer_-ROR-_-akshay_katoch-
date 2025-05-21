@@ -66,7 +66,7 @@ class Movie < ApplicationRecord
   def send_fcm_notification(tokens)
     notification_title = "New Movie Added!"
     body = "#{self.title} has been added to Movie Explorer+."
-    data = { movie_id: id.to_s, url: "/movies/#{id}" }
+    data = { movie_id: id.to_s, url: "https://movieexplorerplus.netlify.app/movies/#{id}" }
 
     fcm_service = FcmService.new
     fcm_service.send_notification(tokens, notification_title, body, data)
