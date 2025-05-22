@@ -1,4 +1,4 @@
-# spec/models/movie_spec.rb
+
 require 'rails_helper'
 
 RSpec.describe Movie, type: :model do

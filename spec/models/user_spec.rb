@@ -122,16 +122,14 @@ RSpec.describe User, type: :model do
   describe '#as_json_with_plan' do
     it 'includes the active plan in the JSON output if subscription is active' do
       create(:subscription, user: user, status: 'active', plan: 'basic')
-      user.reload # Reload the user to refresh the subscription association
+      user.reload 
       json = user.as_json_with_plan
       expect(json['active_plan']).to eq('basic')
     end
 
     it 'returns basic for active_plan if no active subscription exists' do
-      # Destroy any existing subscription to simulate the "no subscription" case
       user.subscription&.destroy
       user.reload
-      # ensure_subscription will create a default subscription with plan: 'basic', status: 'active'
       json = user.as_json_with_plan
       expect(json['active_plan']).to eq('basic')
     end

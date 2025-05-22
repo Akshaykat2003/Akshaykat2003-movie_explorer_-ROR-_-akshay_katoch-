@@ -1,4 +1,3 @@
-# spec/factories/movies.rb
 FactoryBot.define do
   factory :movie do
     title { Faker::Movie.title }

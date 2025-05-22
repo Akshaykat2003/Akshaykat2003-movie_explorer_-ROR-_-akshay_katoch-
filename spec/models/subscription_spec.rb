@@ -41,13 +41,13 @@ RSpec.describe Subscription, type: :model do
     end
 
     context 'when status is pending' do
+      
       context 'with a checkout session (web client)' do
         it 'is not valid without session_expires_at' do
           subscription = build(:subscription, :gold, status: 'pending', session_id: 'cs_test_123', session_expires_at: nil)
           expect(subscription).not_to be_valid
           expect(subscription.errors[:session_expires_at]).to include("can't be blank")
         end
-
         it 'is valid with session_expires_at' do
           subscription = build(:subscription, :gold, status: 'pending', session_id: 'cs_test_123', session_expires_at: 1.hour.from_now)
           expect(subscription).to be_valid
