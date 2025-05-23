@@ -24,6 +24,10 @@ Rails.application.routes.draw do
       get    'subscriptions/cancel',           to: 'subscriptions#cancel'
       get    'subscriptions/check_status', to: 'subscriptions#check_subscription_status'
       post   'subscriptions/confirm_payment',  to: 'subscriptions#confirm_payment'
+
+      get    'wishlist', to: 'wishlists#index'
+      post   'wishlist', to: 'wishlists#create'
+      delete 'wishlist/:movie_id', to: 'wishlists#destroy'
     end
   end
 

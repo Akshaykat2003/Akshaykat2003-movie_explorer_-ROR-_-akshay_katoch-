@@ -1,6 +1,8 @@
 class Movie < ApplicationRecord
   has_one_attached :poster
   has_one_attached :banner
+  has_many :wishlists, dependent: :destroy
+  has_many :wishlisted_by_users, through: :wishlists, source: :user
 
   enum plan: { basic: 0, gold: 1, platinum: 2 }
 

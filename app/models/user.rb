@@ -1,6 +1,8 @@
 class User < ApplicationRecord
   has_secure_password
   has_one :subscription, dependent: :destroy
+  has_many :wishlists, dependent: :destroy
+  has_many :wishlisted_movies, through: :wishlists, source: :movie
 
   VALID_EMAIL_REGEX = /\A[^@\s]+@[^@\s]+\z/
 

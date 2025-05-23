@@ -9,7 +9,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: "JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions). Use the /login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues."
+      description: "JWT token required for authenticated endpoints (supervisor/admin roles for create/update/delete movies, user for subscriptions and wishlist). Use the /login endpoint to obtain a token. In Swagger UI, enter the token in the 'Authorize' button as 'Bearer <token>' (with the 'Bearer' prefix and a space). Some Swagger UI versions may require entering only the token without the 'Bearer' prefix—try both formats if you encounter issues."
   schemas:
     User:
       type: object
@@ -392,7 +392,7 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Device token is already in use by another user"]
-  /moves:
+  /movies:
     get:
       summary: List movies
       description: "Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre. No authentication is required, but a JWT token can be provided to identify the user."
@@ -1130,31 +1130,82 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Failed to complete subscription: Payment not completed"]
-  /subscriptions/check_status:
+  /wishlist:
     get:
-      summary: Check subscription status
-      description: "Retrieves the status of the authenticated user's subscription. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'."
+      summary: Retrieve the user's wishlist
+      description: "Retrieves a list of movies in the authenticated user's wishlist. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
       tags:
-        - Subscriptions
+        - Wishlist
       security:
         - BearerAuth: []
       responses:
         '200':
-          description: "Subscription status retrieved successfully"
+          description: "Wishlist retrieved successfully"
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Subscription'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Movie'
               example:
-                id: 1
-                user_id: 1
-                plan: "platinum"
-                status: "active"
-                created_at: "2025-05-14T02:24:00Z"
-                updated_at: "2025-05-14T02:24:00Z"
-                expiry_date: "2025-06-14T02:24:00Z"
-                session_id: null
-                session_expires_at: null
+                - id: 1
+                  title: "John Wick"
+                  genre: "Action"
+                  release_year: 2014
+                  rating: 8.8
+                  director: "Chad Stahelski"
+                  duration: 120
+                  description: "John Wick's style of shooting baddi"
+                  plan: "basic"
+                  poster_url: "https://res.cloudinary.com/example/image/upload/v1234567890/poster.jpg"
+                  banner_url: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
+        '401':
+          description: "Unauthorized (missing or invalid token)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authenticated user not found"]
+    post:
+      summary: Add a movie to the user's wishlist
+      description: "Adds a movie to the authenticated user's wishlist. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                movie_id:
+                  type: integer
+                  example: 1
+                  description: "ID of the movie to add to the wishlist"
+              required:
+                - movie_id
+      responses:
+        '201':
+          description: "Movie added to wishlist successfully"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Movie added to wishlist"
+                  movie_id:
+                    type: integer
+                    example: 1
+                required:
+                  - message
+                  - movie_id
+              example:
+                message: "Movie added to wishlist"
+                movie_id: 1
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
@@ -1164,13 +1215,73 @@ paths:
               example:
                 errors: ["Authenticated user not found"]
         '404':
-          description: "Subscription not found"
+          description: "Movie not found"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["Subscription not found"]
+                errors: ["Movie not found"]
+        '422':
+          description: "Validation error (e.g., movie already wishlisted)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["User has already wishlisted this movie"]
+  /wishlist/{movie_id}:
+    delete:
+      summary: Remove a movie from the user's wishlist
+      description: "Removes a movie from the authenticated user's wishlist. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: movie_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 1
+          description: "ID of the movie to remove from the wishlist"
+      responses:
+        '200':
+          description: "Movie removed from wishlist successfully"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Movie removed from wishlist"
+                  movie_id:
+                    type: integer
+                    example: 1
+                required:
+                  - message
+                  - movie_id
+              example:
+                message: "Movie removed from wishlist"
+                movie_id: 1
+        '401':
+          description: "Unauthorized (missing or invalid token)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authenticated user not found"]
+        '404':
+          description: "Movie not in wishlist"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Movie not in wishlist"]
 servers:
   - url: http://localhost:3000/api/v1
     description: "Development server"
