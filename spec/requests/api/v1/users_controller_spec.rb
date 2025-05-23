@@ -145,8 +145,8 @@ RSpec.describe 'Api::V1::UsersController', type: :request do
              headers: { 'Authorization' => "Bearer #{token}" }
         expect(response).to have_http_status(:ok)
         expect(JSON.parse(response.body)['message']).to eq('Preferences updated successfully')
-        expect(JSON.parse(response.body)['user']['device_token']).to eq('fcm-device-token-here')
-        expect(JSON.parse(response.body)['user']['notifications_enabled']).to eq(true)
+        expect(JSON.parse(response.body)['device_token']).to eq('fcm-device-token-here')
+        expect(JSON.parse(response.body)['notifications_enabled']).to eq(true)
       end
 
       # it 'handles no changes to preferences' do

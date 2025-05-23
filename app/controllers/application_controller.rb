@@ -55,5 +55,4 @@ class ApplicationController < ActionController::Base
     controller_path.start_with?('admin/')
   end
 
-
 end
