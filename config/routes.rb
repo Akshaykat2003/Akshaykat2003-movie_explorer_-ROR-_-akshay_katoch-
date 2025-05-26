@@ -9,6 +9,7 @@ Rails.application.routes.draw do
       post 'logout', to: 'users#logout'
       post 'update_profile_picture', to: 'users#update_profile_picture'
       
+      
       post 'update_preferences', to: 'users#update_preferences'
       post 'send_notification', to: 'notifications#send_fcm'
 
@@ -29,6 +30,7 @@ Rails.application.routes.draw do
       get    'wishlist', to: 'wishlists#index'
       post   'wishlist', to: 'wishlists#create'
       delete 'wishlist/:movie_id', to: 'wishlists#destroy'
+      delete 'wishlist', to: 'wishlists#clear'
     end
   end
 

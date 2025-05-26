@@ -99,6 +99,11 @@ components:
           type: string
           example: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
           nullable: true
+        is_wishlisted:
+          type: boolean
+          example: true
+          nullable: true
+          description: "Indicates if the movie is in the user's wishlist (true if wishlisted, false if not, present only in wishlist-related endpoints)."
       required:
         - id
         - title
@@ -1178,7 +1183,7 @@ paths:
   /wishlist:
     get:
       summary: Retrieve the user's wishlist
-      description: "Retrieves a list of movies in the authenticated user's wishlist. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
+      description: "Retrieves a list of movies in the authenticated user's wishlist. Each movie includes an 'is_wishlisted' field set to true. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
       tags:
         - Wishlist
       security:
@@ -1204,6 +1209,7 @@ paths:
                   plan: "basic"
                   poster_url: "https://res.cloudinary.com/example/image/upload/v1234567890/poster.jpg"
                   banner_url: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
+                  is_wishlisted: true
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
@@ -1213,8 +1219,8 @@ paths:
               example:
                 errors: ["Authenticated user not found"]
     post:
-      summary: Add a movie to the user's wishlist
-      description: "Adds a movie to the authenticated user's wishlist. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
+      summary: Toggle a movie in the user's wishlist
+      description: "Toggles a movie in the authenticated user's wishlist. If the movie is not wishlisted, it is added; if it is already wishlisted, it is removed. Returns the movie's wishlist status ('is_wishlisted'). Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
       tags:
         - Wishlist
       security:
@@ -1228,12 +1234,12 @@ paths:
                 movie_id:
                   type: integer
                   example: 1
-                  description: "ID of the movie to add to the wishlist"
+                  description: "ID of the movie to toggle in the wishlist"
               required:
                 - movie_id
       responses:
-        '201':
-          description: "Movie added to wishlist successfully"
+        '200':
+          description: "Wishlist toggled successfully"
           content:
             application/json:
               schema:
@@ -1242,15 +1248,31 @@ paths:
                   message:
                     type: string
                     example: "Movie added to wishlist"
+                    description: "Either 'Movie added to wishlist' or 'Movie removed from wishlist'"
                   movie_id:
                     type: integer
                     example: 1
+                  is_wishlisted:
+                    type: boolean
+                    example: true
+                    description: "Indicates if the movie is now wishlisted (true) or not (false)"
                 required:
                   - message
                   - movie_id
-              example:
-                message: "Movie added to wishlist"
-                movie_id: 1
+                  - is_wishlisted
+              examples:
+                added:
+                  summary: Movie added to wishlist
+                  value:
+                    message: "Movie added to wishlist"
+                    movie_id: 1
+                    is_wishlisted: true
+                removed:
+                  summary: Movie removed from wishlist
+                  value:
+                    message: "Movie removed from wishlist"
+                    movie_id: 1
+                    is_wishlisted: false
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
@@ -1267,18 +1289,46 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Movie not found"]
-        '422':
-          description: "Validation error (e.g., movie already wishlisted)"
+    delete:
+      summary: Clear all movies from the user's wishlist
+      description: "Removes all movies from the authenticated user's wishlist. Returns the number of movies removed. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
+      tags:
+        - Wishlist
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: "Wishlist cleared successfully"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "All wishlisted movies removed"
+                  count:
+                    type: integer
+                    example: 2
+                    description: "Number of movies removed from the wishlist"
+                required:
+                  - message
+                  - count
+              example:
+                message: "All wishlisted movies removed"
+                count: 2
+        '401':
+          description: "Unauthorized (missing or invalid token)"
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                errors: ["User has already wishlisted this movie"]
+                errors: ["Authenticated user not found"]
   /wishlist/{movie_id}:
     delete:
       summary: Remove a movie from the user's wishlist
-      description: "Removes a movie from the authenticated user's wishlist. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
+      description: "Removes a specific movie from the authenticated user's wishlist. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
       tags:
         - Wishlist
       security:
@@ -1305,12 +1355,18 @@ paths:
                   movie_id:
                     type: integer
                     example: 1
+                  is_wishlisted:
+                    type: boolean
+                    example: false
+                    description: "Indicates the movie is no longer wishlisted"
                 required:
                   - message
                   - movie_id
+                  - is_wishlisted
               example:
                 message: "Movie removed from wishlist"
                 movie_id: 1
+                is_wishlisted: false
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
