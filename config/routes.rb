@@ -28,6 +28,7 @@ Rails.application.routes.draw do
       get    'wishlist', to: 'wishlists#index'
       post   'wishlist', to: 'wishlists#create'
       delete 'wishlist/:movie_id', to: 'wishlists#destroy'
+      delete 'wishlist', to: 'wishlists#clear'
     end
   end
 
