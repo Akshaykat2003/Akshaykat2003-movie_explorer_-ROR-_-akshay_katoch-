@@ -8,6 +8,7 @@ Rails.application.routes.draw do
       post 'login', to: 'users#login'
       post 'logout', to: 'users#logout'
       
+      
       post 'update_preferences', to: 'users#update_preferences'
       post 'send_notification', to: 'notifications#send_fcm'
 
