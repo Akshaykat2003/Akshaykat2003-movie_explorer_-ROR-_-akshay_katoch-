@@ -1,4 +1,4 @@
-# app/models/wishlist.rb
+
 class Wishlist < ApplicationRecord
   belongs_to :user
   belongs_to :movie
@@ -7,14 +7,11 @@ class Wishlist < ApplicationRecord
   def self.add_to_wishlist(user, movie_id)
     movie = Movie.find_by(id: movie_id)
     return { success: false, errors: ["Movie not found"] } unless movie
-
     wishlist = user.wishlists.find_by(movie_id: movie_id)
     if wishlist
-      # Movie is already wishlisted, so remove it (toggle off)
       wishlist.destroy
       { success: true, data: { message: "Movie removed from wishlist", movie_id: movie.id, is_wishlisted: false } }
     else
-      # Movie is not wishlisted, so add it (toggle on)
       new_wishlist = user.wishlists.build(movie: movie)
       if new_wishlist.save
         { success: true, data: { message: "Movie added to wishlist", movie_id: movie.id, is_wishlisted: true } }

@@ -1180,6 +1180,55 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Failed to complete subscription: Payment not completed"]
+  /subscriptions/check_status:
+    get:
+      summary: Check subscription status
+      description: "Checks the current status of the user's subscription. Returns the subscription details including plan, status, and expiry date. Requires a valid JWT token in the 'Authorization' header as 'Bearer <token>'. Use the /login endpoint to obtain a token."
+      tags:
+        - Subscriptions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: "Subscription status retrieved successfully"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  subscription_id:
+                    type: integer
+                    example: 1
+                  plan:
+                    type: string
+                    enum: [basic, gold, platinum]
+                    example: "platinum"
+                  status:
+                    type: string
+                    enum: [active, cancelled, expired]
+                    example: "active"
+                  expiry_date:
+                    type: string
+                    format: date-time
+                    example: "2024-12-31T23:59:59Z"
+                required:
+                  - subscription_id
+                  - plan
+                  - status
+                  - expiry_date
+              example:
+                subscription_id: 1
+                plan: "platinum"
+                status: "active"
+                expiry_date: "2024-12-31T23:59:59Z"
+        '401':
+          description: "Unauthorized (missing or invalid token)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authenticated user not found"]
   /wishlist:
     get:
       summary: Retrieve the user's wishlist
