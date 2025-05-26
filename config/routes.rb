@@ -7,6 +7,7 @@ Rails.application.routes.draw do
       post 'signup', to: 'users#signup'
       post 'login', to: 'users#login'
       post 'logout', to: 'users#logout'
+      post 'update_profile_picture', to: 'users#update_profile_picture'
       
       post 'update_preferences', to: 'users#update_preferences'
       post 'send_notification', to: 'notifications#send_fcm'

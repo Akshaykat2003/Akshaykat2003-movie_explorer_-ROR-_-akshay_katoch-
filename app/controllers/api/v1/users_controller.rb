@@ -57,7 +57,17 @@ class Api::V1::UsersController < ApplicationController
     status = result[:error] == 'Token is missing' ? :unauthorized : :unprocessable_entity
     render json: { errors: [result[:error]] }, status: status
   end
-end
+ end
+
+  def update_profile_picture
+    unless current_user
+      render json: { errors: ["Authentication required"] }, status: :unauthorized
+      return
+    end
+    result = User.update_profile_picture(current_user, params[:profile_picture])
+    render json: result.except(:status), status: result[:status]
+  end
+
 
   private
 

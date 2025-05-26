@@ -392,6 +392,51 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Device token is already in use by another user"]
+  /update_profile_picture:
+    post:
+      summary: Update user profile picture
+      description: "Updates the user's profile picture. Requires a valid JWT token. First, use /login to obtain a token, then enter it in the 'Authorize' button (top-right) as 'Bearer <token>'."
+      tags:
+        - Users
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                profile_picture:
+                  type: string
+                  format: binary
+                  description: "Profile picture image file"
+              required:
+                - profile_picture
+      responses:
+        '200':
+          description: "Profile picture updated successfully"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Profile picture updated successfully"
+                  profile_picture_url:
+                    type: string
+                    example: "https://res.cloudinary.com/example/image/upload/v1234567890/profile.jpg"
+              example:
+                message: "Profile picture updated successfully"
+                profile_picture_url: "https://res.cloudinary.com/example/image/upload/v1234567890/profile.jpg"
+        '401':
+          description: "Unauthorized (invalid or missing JWT token)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Authentication required"]
   /movies:
     get:
       summary: List movies

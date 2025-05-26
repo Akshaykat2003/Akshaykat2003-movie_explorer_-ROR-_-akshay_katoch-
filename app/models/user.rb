@@ -3,8 +3,11 @@ class User < ApplicationRecord
   has_one :subscription, dependent: :destroy
   has_many :wishlists, dependent: :destroy
   has_many :wishlisted_movies, through: :wishlists, source: :movie
+  has_one_attached :profile_picture
 
   VALID_EMAIL_REGEX = /\A[^@\s]+@[^@\s]+\z/
+  VALID_IMAGE_TYPES = %w[image/png image/jpg image/jpeg].freeze
+  MAX_IMAGE_SIZE = 5.megabytes
 
   validates :first_name, presence: true, length: { maximum: 50 }
   validates :last_name, presence: true, length: { maximum: 50 }
@@ -68,6 +71,39 @@ class User < ApplicationRecord
   def active_plan
     ensure_subscription
     subscription&.active? ? subscription.plan : 'basic'
+  end
+
+  def profile_picture_url
+    Cloudinary::Utils.cloudinary_url(profile_picture.key, resource_type: :image) if profile_picture.attached?
+  rescue StandardError
+    nil
+  end
+
+  def self.update_profile_picture(user, profile_picture)
+    return { success: false, errors: ["Profile picture file is required"], status: :bad_request } unless profile_picture.present?
+    return { success: false, errors: ["User must be saved before attaching a profile picture"], status: :unprocessable_entity } unless user.persisted?
+
+    unless VALID_IMAGE_TYPES.include?(profile_picture.content_type)
+      return { success: false, errors: ["Profile picture must be a valid image format (PNG, JPG, JPEG)"], status: :unprocessable_entity }
+    end
+
+    if profile_picture.size > MAX_IMAGE_SIZE
+      return { success: false, errors: ["Profile picture must be less than 5MB"], status: :unprocessable_entity }
+    end
+
+    ActiveRecord::Base.transaction do
+      user.profile_picture.purge if user.profile_picture.attached?
+      user.profile_picture.attach(profile_picture)
+      user.save!
+    end
+
+    { success: true, message: "Profile picture updated successfully", profile_picture_url: user.profile_picture_url, status: :ok }
+  rescue ActiveStorage::Error, ActiveRecord::RecordInvalid => e
+    Rails.logger.error("Profile picture update error: #{e.message}")
+    { success: false, errors: ["Failed to update profile picture: #{e.message}"], status: :unprocessable_entity }
+  rescue StandardError => e
+    Rails.logger.error("Profile picture update error: #{e.message}")
+    { success: false, errors: ["Internal server error: #{e.message}"], status: :internal_server_error }
   end
 
   private
