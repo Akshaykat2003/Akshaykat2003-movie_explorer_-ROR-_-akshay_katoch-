@@ -46,8 +46,20 @@ components:
         notifications_enabled:
           type: boolean
           example: true
+          description: "Whether the user has enabled notifications (defaults to true)."
+        stripe_customer_id:
+          type: string
+          example: null
           nullable: true
-          description: "Whether the user has enabled notifications."
+          description: "Stripe customer ID, if linked."
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-05-26T17:28:38.693Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-05-26T17:28:38.693Z"
       required:
         - id
         - first_name
@@ -56,6 +68,9 @@ components:
         - mobile_number
         - role
         - active_plan
+        - notifications_enabled
+        - created_at
+        - updated_at
     Movie:
       type: object
       properties:
@@ -116,14 +131,14 @@ components:
       properties:
         id:
           type: integer
-          example: 1
+          example: 31
         user_id:
           type: integer
-          example: 1
+          example: 10
         plan:
           type: string
           enum: [basic, gold, platinum]
-          example: "platinum"
+          example: "basic"
         status:
           type: string
           enum: [pending, active, inactive, cancelled]
@@ -131,25 +146,28 @@ components:
         created_at:
           type: string
           format: date-time
-          example: "2025-05-14T02:24:00Z"
+          example: "2025-05-08T07:30:18.299Z"
         updated_at:
           type: string
           format: date-time
-          example: "2025-05-14T02:24:00Z"
+          example: "2025-05-27T04:19:24.638Z"
         expiry_date:
           type: string
           format: date-time
-          example: "2025-06-14T02:24:00Z"
+          example: null
           nullable: true
+          description: "Expiry date of the subscription; null for basic plan."
         session_id:
           type: string
-          example: "cs_test_a1hlMzOdvzNk7ooIDs1EhCk8tiGCENBp2SwjJUUMrlZddY6Ju7WvF4YXTD"
+          example: null
           nullable: true
+          description: "Stripe session or payment intent ID, if applicable."
         session_expires_at:
           type: string
           format: date-time
-          example: "2025-05-14T02:54:00Z"
+          example: null
           nullable: true
+          description: "Expiration time of the Stripe session, if applicable."
       required:
         - id
         - user_id
@@ -221,7 +239,7 @@ paths:
                 message: "Signup successful"
                 token: "eyJhbGciOiJIUzI1NiJ9..."
                 user:
-                  id: 1
+                  id: 3
                   first_name: "Akshay"
                   last_name: "Katoch"
                   email: "akshaykatoch38@gmail.com"
@@ -229,7 +247,10 @@ paths:
                   role: "user"
                   active_plan: "basic"
                   device_token: null
-                  notifications_enabled: null
+                  notifications_enabled: true
+                  stripe_customer_id: null
+                  created_at: "2025-05-26T17:28:38.693Z"
+                  updated_at: "2025-05-26T17:28:38.693Z"
         '422':
           description: "Invalid input"
           content:
@@ -277,7 +298,7 @@ paths:
               example:
                 token: "eyJhbGciOiJIUzI1NiJ9..."
                 user:
-                  id: 1
+                  id: 3
                   first_name: "Akshay"
                   last_name: "Katoch"
                   email: "akshaykatoch38@gmail.com"
@@ -285,7 +306,10 @@ paths:
                   role: "user"
                   active_plan: "basic"
                   device_token: null
-                  notifications_enabled: null
+                  notifications_enabled: true
+                  stripe_customer_id: null
+                  created_at: "2025-05-26T17:28:38.693Z"
+                  updated_at: "2025-05-26T17:28:38.693Z"
         '401':
           description: "Invalid credentials"
           content:
@@ -379,7 +403,7 @@ paths:
                   - message
               example:
                 message: "Preferences updated successfully"
-                device_token: "fcm-device-token-here"
+                device_token: null
                 notifications_enabled: true
         '401':
           description: "Unauthorized (invalid or missing JWT token)"
@@ -646,9 +670,11 @@ paths:
   /movies/{id}:
     get:
       summary: Show a movie
-      description: "Retrieves the details of a specific movie. No authentication is required, and any user can view the details of any movie, regardless of their subscription plan."
+      description: "Retrieves the details of a specific movie. Authentication is optional. If authenticated, the user's subscription plan (basic, gold, platinum) must meet or exceed the movie's required plan to access details. If unauthenticated, only basic plan movies can be accessed. Provide a valid JWT token in the 'Authorization' header as 'Bearer <token>' for authenticated access."
       tags:
         - Movies
+      security:
+        - BearerAuth: [] # Optional authentication
       parameters:
         - name: id
           in: path
@@ -674,6 +700,14 @@ paths:
                 plan: "basic"
                 poster_url: "https://res.cloudinary.com/example/image/upload/v1234567890/poster.jpg"
                 banner_url: "https://res.cloudinary.com/example/image/upload/v1234567890/banner.jpg"
+        '403':
+          description: "Forbidden (insufficient subscription plan)"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Access denied: Your subscription plan does not allow access to this movie"]
         '404':
           description: "Movie not found"
           content:
@@ -909,7 +943,7 @@ paths:
                       amount:
                         type: integer
                         example: 499
-                        description: "Amount in INR as set in the Stripe Dashboard (e.g., 499 = ₹499)"
+                        description: "Amount in INR (e.g., 499 = ₹499)"
                       currency:
                         type: string
                         example: "inr"
@@ -921,6 +955,18 @@ paths:
                       - amount
                       - currency
                     description: "Response for paid plans (gold, platinum) for mobile clients (X-Client-Type: mobile)"
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        example: "Basic subscription created successfully"
+                      subscription_id:
+                        type: integer
+                        example: 1
+                    required:
+                      - message
+                      - subscription_id
+                    description: "Response for basic plan"
               examples:
                 web_paid_subscription:
                   summary: Paid subscription for web client
@@ -936,6 +982,11 @@ paths:
                     client_secret: "pi_xxx_secret_yyy"
                     amount: 499
                     currency: "inr"
+                basic_subscription:
+                  summary: Basic subscription
+                  value:
+                    message: "Basic subscription created successfully"
+                    subscription_id: 1
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
@@ -1194,33 +1245,17 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  subscription_id:
-                    type: integer
-                    example: 1
-                  plan:
-                    type: string
-                    enum: [basic, gold, platinum]
-                    example: "platinum"
-                  status:
-                    type: string
-                    enum: [active, cancelled, expired]
-                    example: "active"
-                  expiry_date:
-                    type: string
-                    format: date-time
-                    example: "2024-12-31T23:59:59Z"
-                required:
-                  - subscription_id
-                  - plan
-                  - status
-                  - expiry_date
+                $ref: '#/components/schemas/Subscription'
               example:
-                subscription_id: 1
-                plan: "platinum"
+                id: 31
+                user_id: 10
+                plan: "basic"
                 status: "active"
-                expiry_date: "2024-12-31T23:59:59Z"
+                created_at: "2025-05-08T07:30:18.299Z"
+                updated_at: "2025-05-27T04:19:24.638Z"
+                expiry_date: null
+                session_id: null
+                session_expires_at: null
         '401':
           description: "Unauthorized (missing or invalid token)"
           content:
@@ -1229,6 +1264,14 @@ paths:
                 $ref: '#/components/schemas/Error'
               example:
                 errors: ["Authenticated user not found"]
+        '404':
+          description: "No active subscription found"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                errors: ["Subscription not found"]
   /wishlist:
     get:
       summary: Retrieve the user's wishlist

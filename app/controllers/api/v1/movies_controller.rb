@@ -37,6 +37,10 @@ module Api
       end
 
       def show
+        unless can_access_movie?(@movie)
+          render json: { errors: ["Access denied: Your subscription plan does not allow access to this movie"] }, status: :forbidden
+          return
+        end
         render json: @movie.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :ok
       rescue StandardError
         render json: { errors: ["Internal server error"] }, status: :internal_server_error
@@ -70,6 +74,13 @@ module Api
 
       def movie_params
         params.permit(:title, :genre, :release_year, :rating, :director, :duration, :description, :plan, :poster, :banner)
+      end
+
+      def can_access_movie?(movie)
+        return movie.plan == "basic" unless @current_user 
+        subscription = @current_user.subscription
+        return false unless subscription&.active? 
+        Movie.plans[subscription.plan] >= Movie.plans[movie.plan]
       end
     end
   end

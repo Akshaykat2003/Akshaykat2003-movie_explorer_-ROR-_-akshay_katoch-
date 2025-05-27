@@ -50,6 +50,11 @@ class Movie < ApplicationRecord
     nil
   end
 
+  def is_wishlisted(current_user:)
+    return nil unless current_user
+    wishlisted_by_users.exists?(current_user.id)
+  end
+
   def send_new_movie_notification
     tokens = fetch_notification_tokens
     return if tokens.empty?
@@ -59,11 +64,9 @@ class Movie < ApplicationRecord
 
   private
 
-
   def fetch_notification_tokens
     User.where(notifications_enabled: true).where.not(device_token: nil).pluck(:device_token)
   end
-
 
   def send_fcm_notification(tokens)
     notification_title = "New Movie Added!"
