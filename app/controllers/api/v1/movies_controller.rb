@@ -77,16 +77,28 @@ module Api
       end
 
       def can_access_movie?(movie)
+  begin
+    @current_user.ensure_subscription
+  rescue StandardError => e
+    Rails.logger.info "Access denied: Subscription creation failed for user #{@current_user.id}: #{e.message}"
+    return false
+  end
 
-        begin
-          @current_user.ensure_subscription 
-        rescue StandardError
-          return false 
-        end
-        subscription = @current_user.subscription
-        return false unless subscription&.active? 
-        Movie.plans[subscription.plan] >= Movie.plans[movie.plan]
-      end
+  subscription = @current_user.subscription
+  unless subscription&.active?
+    Rails.logger.info "Access denied: Subscription not active for user #{@current_user.id}. Status: #{subscription&.status}"
+    return false
+  end
+
+  user_plan_value = Movie.plans[subscription.plan]
+  movie_plan_value = Movie.plans[movie.plan]
+  unless user_plan_value >= movie_plan_value
+    Rails.logger.info "Access denied: User plan '#{subscription.plan}' (#{user_plan_value}) cannot access movie plan '#{movie.plan}' (#{movie_plan_value}) for user #{@current_user.id}"
+    return false
+  end
+
+  true
+end
     end
   end
 end

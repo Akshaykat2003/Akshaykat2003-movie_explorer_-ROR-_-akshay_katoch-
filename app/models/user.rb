@@ -12,7 +12,7 @@ class User < ApplicationRecord
   validates :first_name, presence: true, length: { maximum: 50 }
   validates :last_name, presence: true, length: { maximum: 50 }
   validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: VALID_EMAIL_REGEX }
-  validates :mobile_number, presence: true,uniqueness: true, length: { is: 10 }, numericality: { only_integer: true }
+  validates :mobile_number, presence: true, uniqueness: true, length: { is: 10 }, numericality: { only_integer: true }
   validates :role, presence: true, inclusion: { in: %w[user supervisor] }
 
   before_validation :downcase_email
@@ -55,7 +55,6 @@ class User < ApplicationRecord
   def generate_jwt
     JWT.encode({ user_id: id, exp: 1.day.from_now.to_i, role: role }, Rails.application.credentials.secret_key_base)
   end
-
 
   def self.decode_jwt(token)
     decoded = JWT.decode(token, Rails.application.credentials.secret_key_base)[0]
@@ -106,14 +105,15 @@ class User < ApplicationRecord
     { success: false, errors: ["Internal server error: #{e.message}"], status: :internal_server_error }
   end
 
-  private
-  def downcase_email
-    self.email = email.downcase if email.present?
-  end
-
   def ensure_subscription
     return if subscription.present?
     Subscription.create_default_for_user(self)
     reload 
+  end
+
+  private
+
+  def downcase_email
+    self.email = email.downcase if email.present?
   end
 end
