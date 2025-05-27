@@ -4,7 +4,7 @@ module Api
       skip_before_action :verify_authenticity_token
       before_action :set_movie, only: [:show, :update, :destroy]
       before_action :authorize_supervisor_or_admin, only: [:create, :update, :destroy]
-      skip_before_action :authenticate_request, only: [:index,:all]
+      skip_before_action :authenticate_request, only: [:index, :all] 
 
       def index
         movies = Movie.search_and_filter(params).page(params[:page]).per(12)
@@ -42,8 +42,8 @@ module Api
           return
         end
         render json: @movie.as_json(only: [:id, :title, :genre, :release_year, :rating, :director, :duration, :description, :plan], methods: [:poster_url, :banner_url]), status: :ok
-      rescue StandardError
-        render json: { errors: ["Internal server error"] }, status: :internal_server_error
+      rescue StandardError => e
+        render json: { errors: ["Internal server error: #{e.message}"] }, status: :internal_server_error
       end
 
       def update
@@ -77,10 +77,15 @@ module Api
       end
 
       def can_access_movie?(movie)
-        return movie.plan == "basic" unless @current_user
+
+        begin
+          @current_user.ensure_subscription 
+        rescue StandardError
+          return false 
+        end
         subscription = @current_user.subscription
-        return movie.plan == "basic" unless subscription&.active?
-        Movie.plans[subscription.plan] >= Movie.plans[movie.plan] 
+        return false unless subscription&.active? 
+        Movie.plans[subscription.plan] >= Movie.plans[movie.plan]
       end
     end
   end
