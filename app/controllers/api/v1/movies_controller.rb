@@ -4,7 +4,7 @@ module Api
       skip_before_action :verify_authenticity_token
       before_action :set_movie, only: [:show, :update, :destroy]
       before_action :authorize_supervisor_or_admin, only: [:create, :update, :destroy]
-      skip_before_action :authenticate_request, only: [:index, :show, :all]
+      skip_before_action :authenticate_request, only: [:index,:all]
 
       def index
         movies = Movie.search_and_filter(params).page(params[:page]).per(12)
@@ -77,10 +77,11 @@ module Api
       end
 
       def can_access_movie?(movie)
-        return movie.plan == "basic" unless @current_user 
+        return movie.plan == "basic" unless @current_user # Unauthenticated users can only access basic movies
+        @current_user.ensure_subscription # Ensure the user has a subscription
         subscription = @current_user.subscription
-        return false unless subscription&.active? 
-        Movie.plans[subscription.plan] >= Movie.plans[movie.plan]
+        return movie.plan == "basic" unless subscription&.active? # Inactive subscription users can only access basic movies
+        Movie.plans[subscription.plan] >= Movie.plans[movie.plan] # Active subscription users can access movies based on their plan
       end
     end
   end
