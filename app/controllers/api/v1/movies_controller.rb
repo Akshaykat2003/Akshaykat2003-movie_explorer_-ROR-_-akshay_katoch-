@@ -77,11 +77,10 @@ module Api
       end
 
       def can_access_movie?(movie)
-        return movie.plan == "basic" unless @current_user # Unauthenticated users can only access basic movies
-        @current_user.ensure_subscription # Ensure the user has a subscription
+        return movie.plan == "basic" unless @current_user
         subscription = @current_user.subscription
-        return movie.plan == "basic" unless subscription&.active? # Inactive subscription users can only access basic movies
-        Movie.plans[subscription.plan] >= Movie.plans[movie.plan] # Active subscription users can access movies based on their plan
+        return movie.plan == "basic" unless subscription&.active?
+        Movie.plans[subscription.plan] >= Movie.plans[movie.plan] 
       end
     end
   end
