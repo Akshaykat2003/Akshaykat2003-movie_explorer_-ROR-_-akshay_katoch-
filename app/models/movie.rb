@@ -36,6 +36,8 @@ class Movie < ApplicationRecord
     end
   end
 
+  
+
   def update_movie(params)
     update(params) ? { success: true, movie: self } : { success: false, errors: errors.full_messages }
   end

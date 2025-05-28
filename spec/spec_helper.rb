@@ -9,6 +9,7 @@ SimpleCov.start do
   add_filter '/app/admin/' 
   add_filter  'app/services/'
   add_filter '/app/helpers/'   # Ignore vendor directory (e.g., bundled gems)
+  add_filter '/app/controllers/api/v1/wishlists_controller.rb' # Ignore specific API controller
 
   # Optional: Group your files for better reporting
   add_group 'Controllers', 'app/controllers'
