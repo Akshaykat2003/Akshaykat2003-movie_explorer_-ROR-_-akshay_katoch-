@@ -469,7 +469,7 @@ paths:
   /movies:
     get:
       summary: List movies
-      description: "Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre. No authentication is required, but a JWT token can be provided to identify the user."
+      description: "Retrieves a paginated list of all movies, regardless of the user's subscription plan. Use query parameters to search by title or filter by genre, release year, or rating. No authentication is required, but a JWT token can be provided to identify the user."
       tags:
         - Movies
       parameters:
@@ -485,6 +485,19 @@ paths:
           schema:
             type: string
           description: "Filter by genre"
+        - name: release_year
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: "Filter by release year"
+        - name: rating
+          in: query
+          required: false
+          schema:
+            type: number
+            format: float
+          description: "Filter by rating"
         - name: page
           in: query
           required: false

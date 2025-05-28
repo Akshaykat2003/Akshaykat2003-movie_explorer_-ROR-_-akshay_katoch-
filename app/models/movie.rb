@@ -20,6 +20,8 @@ class Movie < ApplicationRecord
     movies = all
     movies = movies.where("title ILIKE ?", "%#{params[:search]}%") if params[:search].present?
     movies = movies.where(genre: params[:genre]) if params[:genre].present?
+    movies = movies.where(release_year: params[:release_year]) if params[:release_year].present?
+    movies = movies.where(rating: params[:rating]) if params[:rating].present?
     movies
   end
 

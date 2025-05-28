@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.1].define(version: 2025_05_23_054058) do
+ActiveRecord::Schema[7.1].define(version: 2025_05_28_054058) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
 
@@ -88,6 +88,10 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_23_054058) do
     t.integer "plan", default: 0
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.index ["genre"], name: "index_movies_on_genre"
+    t.index ["rating"], name: "index_movies_on_rating"
+    t.index ["release_year"], name: "index_movies_on_release_year"
+    t.index ["title"], name: "index_movies_on_title"
   end
 
   create_table "subscriptions", force: :cascade do |t|
@@ -115,6 +119,8 @@ ActiveRecord::Schema[7.1].define(version: 2025_05_23_054058) do
     t.string "device_token"
     t.string "stripe_customer_id"
     t.index ["device_token"], name: "index_users_on_device_token"
+    t.index ["email"], name: "index_users_on_email", unique: true
+    t.index ["notifications_enabled"], name: "index_users_on_notifications_enabled"
   end
 
   create_table "wishlists", force: :cascade do |t|
