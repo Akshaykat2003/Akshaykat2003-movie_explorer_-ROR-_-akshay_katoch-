@@ -1,5 +1,5 @@
 class Api::V1::SubscriptionsController < ApplicationController
-  before_action :authenticate_request, only: [:create, :check_subscription_status, :confirm_payment] 
+  before_action :authenticate_request, only: [:create, :check_subscription_status, :confirm_payment]
   skip_before_action :verify_authenticity_token, only: [:create, :success, :cancel, :confirm_payment]
   before_action :validate_session_and_subscription, only: [:success, :cancel]
 
@@ -21,8 +21,8 @@ class Api::V1::SubscriptionsController < ApplicationController
           message: 'Payment Intent created',
           subscription_id: subscription.id,
           client_secret: result[:payment_intent].client_secret,
-          amount: result[:amount], 
-          currency: result[:currency] 
+          amount: result[:amount],
+          currency: result[:currency]
         }, status: :created
       elsif plan == 'basic'
         render json: {

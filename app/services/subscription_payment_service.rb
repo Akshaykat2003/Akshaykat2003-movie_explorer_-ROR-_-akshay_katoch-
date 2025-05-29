@@ -5,8 +5,12 @@ class SubscriptionPaymentService
     subscription = user.subscription || Subscription.new(user: user)
 
     if plan == 'basic'
-      subscription.update!(plan: plan, status: 'active', expiry_date: nil, session_id: nil, session_expires_at: nil)
-      return { success: true, subscription: subscription }
+      subscription.assign_attributes(plan: plan, status: 'active', expiry_date: nil, session_id: nil, session_expires_at: nil)
+      if subscription.save
+        return { success: true, subscription: subscription }
+      else
+        return { success: false, error: "Failed to create basic subscription: #{subscription.errors.full_messages.join(', ')}" }
+      end
     end
 
     customer = find_or_create_customer(user)
@@ -19,11 +23,11 @@ class SubscriptionPaymentService
                end
 
     price = Stripe::Price.retrieve(price_id)
-    amount = price.unit_amount 
-    currency = price.currency 
+    amount = price.unit_amount
+    currency = price.currency
 
     expiry_date = case plan
-                  when 'gold' then Time.current + 2.minute
+                  when 'gold' then Time.current + 5.minutes
                   when 'platinum' then Time.current + 1.month
                   end
 
@@ -36,19 +40,21 @@ class SubscriptionPaymentService
         metadata: { subscription_id: subscription.id, plan: plan }
       )
 
-      subscription.update!(
+      subscription.assign_attributes(
         plan: plan,
         status: 'pending',
         session_id: payment_intent.id,
-        session_expires_at: nil, 
+        session_expires_at: Time.current + 1.hour,
         expiry_date: expiry_date
       )
 
-      amount_in_rupees = amount / 100 
-
-      { success: true, payment_intent: payment_intent, subscription: subscription, amount: amount_in_rupees, currency: currency }
+      if subscription.save
+        amount_in_rupees = amount / 100
+        { success: true, payment_intent: payment_intent, subscription: subscription, amount: amount_in_rupees, currency: currency }
+      else
+        { success: false, error: "Failed to create subscription: #{subscription.errors.full_messages.join(', ')}" }
+      end
     else
-      
       base_url = Rails.env.development? ? "http://localhost:5173" : "https://movieexplorerplus.netlify.app"
       success_url = "#{base_url}/subscription-success?session_id={CHECKOUT_SESSION_ID}&plan=#{plan}"
       cancel_url = "#{base_url}/subscription-cancel?session_id={CHECKOUT_SESSION_ID}"
@@ -62,7 +68,7 @@ class SubscriptionPaymentService
         cancel_url: cancel_url
       )
 
-      subscription.update!(
+      subscription.assign_attributes(
         plan: plan,
         status: 'pending',
         session_id: session.id,
@@ -70,7 +76,11 @@ class SubscriptionPaymentService
         expiry_date: expiry_date
       )
 
-      { success: true, session: session, subscription: subscription }
+      if subscription.save
+        { success: true, session: session, subscription: subscription }
+      else
+        { success: false, error: "Failed to create subscription: #{subscription.errors.full_messages.join(', ')}" }
+      end
     end
   rescue Stripe::StripeError => e
     { success: false, error: "Stripe payment creation failed: #{e.message}" }
@@ -80,7 +90,6 @@ class SubscriptionPaymentService
 
   def self.complete_payment(user:, session_id: nil, payment_intent_id: nil)
     if payment_intent_id
-  
       payment_intent = Stripe::PaymentIntent.retrieve(payment_intent_id)
       return { success: false, error: 'Payment not completed' } unless payment_intent.status == 'succeeded'
 
@@ -90,7 +99,6 @@ class SubscriptionPaymentService
       sub.update!(status: 'active')
       { success: true, subscription: sub }
     else
-      
       session = Stripe::Checkout::Session.retrieve(session_id)
       return { success: false, error: 'Payment not completed' } unless session.payment_status == 'paid'
 

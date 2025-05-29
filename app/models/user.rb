@@ -12,7 +12,6 @@ class User < ApplicationRecord
   validates :first_name, presence: true, length: { maximum: 50 }
   validates :last_name, presence: true, length: { maximum: 50 }
   validates :email, presence: true, uniqueness: { case_sensitive: false }, format: { with: VALID_EMAIL_REGEX }
-  validates :password, presence: true, length: { minimum: 6 }
   validates :mobile_number, presence: true, uniqueness: true, length: { is: 10 }, numericality: { only_integer: true }
   validates :role, presence: true, inclusion: { in: %w[user supervisor] }
 
